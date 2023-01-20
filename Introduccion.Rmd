@@ -1,0 +1,85 @@
+---
+title: "Untitled"
+author: "Mario"
+date: "20/1/2023"
+output: html_document
+---
+
+
+Breve introducción a funciones para el manejo de datos espaciales.
+
+
+Instalar paquetes
+```{r}
+install.packages(c("raster", "ggplot2", "rgdal"), dependences = TRUE)
+```
+Cargar el paquete
+```{r}
+library(raster)
+library(ggplot2)
+library(rgdal)
+```
+
+Ajusta la carpeta de trabajo a la localización de este script
+```{r}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+Cargar datos
+Cargar archivo vectorial
+```{r}
+shp <- readOGR("D:/SEMINARIO_BIOGEOGRAFIA/PN_Ordesa.shp")
+```
+cargar archivo raster
+```{r}
+raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_ordesa.tif")
+```
+
+Información del archivo vectorial
+```{r}
+summary(shp)
+class(shp)
+kk <- shp@data
+```
+Visualizar archivos
+```{r}
+plot(shp)
+```
+```{r}
+plot(raster)
+```
+
+
+Sistemas de referencia
+
+```{r}
+proj4string(shp)
+latlong = "+init=epsg:4326"
+proj4string(shp) = CRS(latlong)
+```
+```{r}
+projection(raster)
+latlong = "+init=epsg:4326"
+spTransform(raster, CRS(latlong))
+```
+
+https://mgimond.github.io/Spatial/mapping-data-in-r.html
+
+
+
+#######################################################
+#######################################################
+#######################################################
+
+Manejo de bucles para la automatización de procesos.
+Descarga y visualización de datos en Rstudio.
+Extracción de datos ráster a partir de puntos basados en latitud y longitud en Rstudio.
+Análisis del patrón de los datos espaciales basados en modelos lineales en Rstudio.
+Presentación de resultados de manera visual en Rstudio.
+
+
+Se realizarán dos prácticas con las que poder asimilar los diferentes procesos explicados.
+
+Práctica 1. Descarga de datos climáticos para una región concreta, basada en bucles, mediante Rstudio.
+
+Práctica 2. Extracción, y posterior visualización de valores de temperatura en localidades concretas.
+
