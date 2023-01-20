@@ -10,9 +10,9 @@ Breve introducción a funciones para el manejo de datos espaciales.
 
 
 Instalar paquetes
-```{r}
-install.packages(c("raster", "ggplot2", "rgdal"), dependences = TRUE)
-```
+#```{r}
+#install.packages(c("raster", "ggplot2", "rgdal"), dependences = TRUE)
+#```
 Cargar el paquete
 ```{r}
 library(raster)
@@ -50,19 +50,25 @@ plot(raster)
 
 
 Sistemas de referencia
+```{r}
+sf::st_crs("EPSG:4326")
+```
 
-```{r}
-proj4string(shp)
-latlong = "+init=epsg:4326"
-proj4string(shp) = CRS(latlong)
-```
-```{r}
-projection(raster)
-latlong = "+init=epsg:4326"
-spTransform(raster, CRS(latlong))
-```
+
+#```{r}
+#proj4string(shp)
+#latlong = "+init=epsg:4326"
+#proj4string(shp) = CRS(latlong)
+#```
+#```{r}
+#projection(raster)
+#latlong = "+init=epsg:4326"
+#spTransform(raster, CRS(latlong))
+#```
 
 https://mgimond.github.io/Spatial/mapping-data-in-r.html
+
+https://geocompr.robinlovelace.net/geometry-operations.html
 
 
 
