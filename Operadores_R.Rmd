@@ -1,111 +1,143 @@
 ---
-title: "Untitled"
-author: "Mario"
-date: "20/1/2023"
+title: "Basicos de R"
 output: html_document
 ---
-# TRABAJANDO EN R
+# RStudio
+RStudio es un ambiente de desarrollo integrado para programar en R
+<img src="C:/GITHUB_REP/seminario_biogeografia_MNCN/Rstudio.jpg" width="800px">  
+***Zona 1: Editor***  
+Es la zona de trabajo en la que se escribe el código que se querrá ejecutar.  
+Para ejecutar el código `Ctrl + Enter`.  
+Para indicar que es un comentario y noes código `#`.  
+***Zona 2: Entorno de trabajo***  
+Se muestran todos los objetos creados. Para crear un objeto `<-`.  
+***Zona 3: Consola y Terminal***  
+Aquí se ejecuta el codigo. Al ejecutar el codigo `Ctrl + Enter` del editor este pasa a la consola. Se muestran los avisos y errores.  
+***Zona 4: Archivos, Plots, Librerías, Ayuda y Visor***  
+Varias pestañas:
+– En Files encontraras los archivos que se encuentren en la carpeta que tengas seleccionada. Podrás moverte por las carpetas de tu sistemas operativo, así como copiar, borrar u otras operaciones.  
+– En Plots te aparecerán los gráficos que quieras pintar en tus scripts.  
+– En Packages, podrás acceder a ver, actualizar, eliminar o descargar paquetes.  
+– En Help aparecerá la ayuda de R base.  
+– En Viewer se abrirán imágenes, que no gráficos.  
 
-## Directorio de trabajo en R
-El directorio de trabajo en R es la carpeta donde se está trabajando. Por lo tanto, es el lugar (el entorno) donde debe almacenar los archivos de su proyecto para poder cargarlos o donde se guardarán sus objetos R.
 
-Obtener la ruta del directorio de trabajo
-```{r}
+# Directorio de trabajo en R
+El directorio de trabajo en R es la carpeta donde se está trabajando. Por lo tanto, es el lugar (el entorno) donde debe almacenar los archivos de su proyecto para poder cargarlos o donde se guardarán sus objetos R.  
+Es importante señalar que las rutas en R se hacen indican con `/`.
+
+**Obtener la ruta del directorio de trabajo**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 getwd()
 ```
-Modificar la ruta del directorio de trabajo
-```{r}
+**Modificar la ruta del directorio de trabajo**  
+Se puede hacer de manera manual `Ctrl + Shift + H`.
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 setwd("C:/NUEVO_DIRECTORIO")
+```
+**Ajusta la carpeta de trabajo a la localización de este script**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 Más Información: https://r-coder.com/working-directory-r/
 
-## Instalación de paquetes R
+# Instalación de paquetes R
 Un paquete R es una biblioteca de funciones
 
-Instalar paquetes desde CRAN (Comprehensive R Archive Network), el repositorio oficial de paquetes R.
-```{r}
+**Instalar paquetes desde CRAN (Comprehensive R Archive Network), el repositorio oficial de paquetes R**  
+Se puede hacer de manera manual `Tools`- `Install Packages...`.
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 install.packages("ggplot")
 ```
-Después de la instalación, hay que cargar el paquete
-```{r}
+Después de la instalación, hay que cargar el paquete con la función library.
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 library("ggplot")
 ```
 Más Información: https://r-coder.com/install-r-packages/
 
-## Ayuda en R
+# Ayuda en R
 
-Ayuda inicial
-```{r}
+**Ayuda inicial**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 help.start()
 ```
-Ayuda de una función o paquete conociendo el nombre exacto
-```{r}
+**Ayuda de una función o paquete conociendo el nombre exacto**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 ?ggplot
 ```
-Ayuda de una función o paquete sin conocer el nombre exacto
-```{r}
+**Ayuda de una función o paquete sin conocer el nombre exacto**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 ??ggpl
 ```
-Viñeta de ejemplos
-Las viñetas son largas guías de paquetes que describen su uso con amplias explicaciones y ejemplos
-```{r}
+# Viñeta de ejemplos
+Las viñetas son largas guías de paquetes que describen su uso con amplias explicaciones y ejemplos**
+```{r, eval = FALSE, warning = FALSE, message = FALSE}
 vignette("extending-ggplot2")
 ```
 Más Información:https://r-coder.com/help-r/
 
-## Tipo de datos en R
+# Tipo de datos en R
 
-Vector
+### Vector
 Los vectores son la estructura de datos más básica en R. Estas estructuras permiten concatenar datos.
-```{r}
+```{r, warning = FALSE, message = FALSE}
 numero <- c(1, 2, 3)
 caracter <- c("a","b", "AbC")
 vector <- c(1, "ae", "2a")
 ```
-Verificar el tipo de vector
-```{r}
+```{r, warning = FALSE, message = FALSE}
+numero
+caracter
+vector
+```
+**Verificar el tipo de vector**
+```{r,  warning = FALSE, message = FALSE}
 class(numero)
 class(caracter)
 class(vector)
 ```
-Conocer la longitud del vector
-```{r}
+**Conocer la longitud del vector**
+```{r,  warning = FALSE, message = FALSE}
 length(vector)
 ```
-Acceder a elementos de vectores
-```{r}
-vector[1]
+**Acceder a elementos de vectores**
+```{r, warning = FALSE, message = FALSE}
+vector[3]
 ```
 Más información: https://r-coder.com/vector-r/
 
-## Marco de datos en R
+### Marco de datos en R
 Los marcos de datos son el objeto más habitual para almacenar datos en R. Este tipo de objeto está formado por filas y columnas.
 
-Crear marco de datos vacío.
-```{r}
+**Crear marco de datos vacío**
+```{r,  warning = FALSE, message = FALSE}
 marco_datos <- data.frame(Nombre = character(),
                           Edad = numeric())
+marco_datos
 ```
-Añadir datos al marco de datos vacío.
-```{r}
+**Añadir datos al marco de datos vacío**
+```{r,  warning = FALSE, message = FALSE}
 marco_datos[1,1] <- "Mario"
 marco_datos[1,2] <- 12
 marco_datos[2,1] <- "Maria"
 marco_datos[2,2] <- 21
+marco_datos
 ```
-Acceder a los datos del marco de datos
-```{r}
+**Acceder a los datos del marco de datos**
+```{r, warning = FALSE, message = FALSE}
 marco_datos[1,1]     # Fila 1 y columna 1
 marco_datos[1, ]     # Fila 1 todas las columnas
 marco_datos[ ,2]     # Todas las filas y columna 2
 marco_datos$Nombre   # Todos los datos de la variable Nombre
 ```
-Agregue columnas y filas al marco de datos
-```{r}
-marco_datos$edad_2 <- marco_datos$Edad * 2 # Sin crear objeto intermedio
-edad_3 <- marco_datos$Edad * 3 # Creando un objeto intermedio u otro ya existente
-marco_datos <- cbind(marco_datos, edad_3)
-nuevo_vector <- c("aaa", 17)
-marco_datos <- rbind(marco_datos, nuevo_vector)
-```
 
+Añadir datos de manera manual:
+https://cran.r-project.org/web/packages/editData/readme/README.html
+
+Más información: https://r-coder.com/dataframe-r/
+
+### Materiales de aprendizaje  
+R for data science: https://r4ds.had.co.nz/index.html en español https://es.r4ds.hadley.nz/  
+YaRrr! The Pirate’s Guide to R: https://bookdown.org/ndphillips/YaRrr/  
+R for Data Analysis: https://trevorfrench.github.io/R-for-Data-Analysis/  
+Más recursos: https://www.learnr4free.com/es/index.html  
