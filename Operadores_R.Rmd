@@ -141,3 +141,4 @@ R for data science: https://r4ds.had.co.nz/index.html en español https://es.r4d
 YaRrr! The Pirate’s Guide to R: https://bookdown.org/ndphillips/YaRrr/  
 R for Data Analysis: https://trevorfrench.github.io/R-for-Data-Analysis/  
 Más recursos: https://www.learnr4free.com/es/index.html  
+Libros y más libros: https://libgen.is/
