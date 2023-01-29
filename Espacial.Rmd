@@ -1,0 +1,179 @@
+---
+output: html_document
+---
+
+# Vectorial  
+
+```{r, warning = FALSE, message = FALSE}
+library(rgdal)
+library(sp)
+library(raster)
+```
+**Importar**  
+Para importar archivos `readOGR`, del paquete `rgdal`.  
+```{r, warning = FALSE}
+Spain <- readOGR("E:/SEMINARIO_BIOGEOGRAFIA/SPAIN/spain.shp")
+PA <- readOGR("E:/SEMINARIO_BIOGEOGRAFIA/PNAC/PA_spain_89.shp")
+```
+**Proyectar**  
+Para conocer el sistema de referencia `proj4string()`.  
+```{r, warning = FALSE}
+proj4string(Spain)
+proj4string(PA)
+```
+Para modificar el sistema de referencia.  
+*WGS84 (Lat/Long): 4326*  
+*ETRS89/UTMz30N: 25830*  
+```{r, warning = FALSE}
+Spain <- spTransform(Spain, CRS("+init=epsg:25830"))
+```   
+Si se quiere utilizar el sistema de referencia de otra capa.  
+```{r, warning = FALSE, eval = FALSE}
+Spain <- spTransform(Spain,
+                     CRS(proj4string(PA)))
+```
+
+**Visualizar**
+```{r}
+plot(Spain)
+```  
+  
+**Variables del objeto**  
+Para acceder a las variables del objeto se utiliza `@` (`Spain@`) o la función `slotNames`.  
+-`data`: Tabla de atributos  
+-`polygons`: Coordenadas de todos los vértices de cada poligono  
+-`plotOrder`: Orden en el que están los poligonos de la capa  
+-`bbox`: Coordenadas del marco más extenso (xmin, ymin, xmax e ymax)   
+-`proj4string`: Tipo de proyección de la capa  
+```{r}
+slotNames(Spain)
+```
+Para conocer las coordenadas de los extremos de la capa  
+```{r}
+Spain@bbox
+```
+
+**Tabla de atributos**  
+Para acceder a la tabla de atributos se utiliza `$`(`Spain@data$NAME`o directamente `Spain$NAME` ).  
+```{r}
+Spain$NAME
+```
+Cuando tenemos muchos atributos. 
+```{r}
+length(PA$DESIG_ENG)
+unique(PA$DESIG_ENG)
+```
+Seleccionar objetos en la tabla de atributos.  
+```{r}
+Aragon <- Spain[Spain$NAME == "Aragon", ]
+PNAC <- PA[PA$DESIG_ENG == "Nacional Park", ]
+```
+**Visualizar varias capas**  
+```{r}
+plot(Spain)
+plot(Aragon, add = T, col = "red")
+plot(PNAC, add = T, col = "green")
+```  
+  
+**Cortar capas**
+```{r, warning = FALSE, message = FALSE}
+PNAC_Aragon <- raster::intersect(Aragon, PNAC)
+
+plot(Aragon)
+plot(Spain, add = T)
+plot(Aragon, add= T, col= "red")
+plot(PNAC_Aragon, add = T, col = "green")
+```
+**Exportar**
+```{r, eval = FALSE}
+writeOGR(Aragon, "E:/SEMINARIO_BIOGEOGRAFIA/Aragon.shp")
+```
+
+# Raster
+
+**Importar**  
+Para importar archivos `raster` del paquete `raster`.  
+```{r}
+Temperatura <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/Temperatura.tif")
+Precipitacion <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/Precipitacion.tif")
+```
+
+**Visualizar**
+```{r}
+plot(Temperatura)  
+```
+  
+**Variables del objeto**  
+Para acceder a las variables del objeto se utiliza `@` (`Temperatura@`) o la función `slotNames`.
+```{r}
+slotNames(Temperatura)
+```
+Para conocer las coordenadas de los extremos del raster
+```{r}
+Temperatura@extent
+```
+
+
+**Unir varios raster en un objeto**   
+Esto es muy util para trabajar con varios raster a la vez.  
+```{r}
+Clima <- stack(Temperatura, Precipitacion)
+plot(Clima)
+Clima
+```
+**Proyectar**  
+Para conocer el sistema de referencia `projection()`.  
+```{r, warning = FALSE}
+projection(Clima)
+```
+Para modificar el sistema de referencia.  
+```{r, warning = FALSE}
+Clima <- projectRaster(Clima, crs = "+init=epsg:25830")
+Clima
+```
+**Algebra raster**  
+Las operaciones sobre los raster se ejecutan directamente sobre el objeto.
+```{r}
+Clima$Temperatura <- Clima$Temperatura / 10
+```
+De igual manera se ejecutan las operaciones entre rasters.
+```{r}
+Aridez <- Clima$Precipitacion / Clima$Temperatura
+plot(Aridez, zlim = c(-300, 400))  
+```
+  
+Estadísticas básicas `min()`, `max()`, `mean()`, `median()`, `sum()`,`range()` (entre otras) para conocer los raster.
+```{r}
+cellStats(Clima, "mean")
+```
+Para calcular estadísticas entre raster se utiliza la función `calc` del paquete `raster`.
+```{r}
+Variable <- calc(Clima, mean)
+plot(Variable)
+```
+  
+**Exportar**
+```{r, eval = FALSE}
+writeRaster(Variable, "E:/SEMINARIO_BIOGEOGRAFIA/Variable.tif")
+```
+
+# Operaciones Vector-Raster  
+**Cortar**  
+Cortar capa raster a partir de capa vectorial.  
+ -`crop`corta con el extend de archivo vectorial.  
+ -`mask`corta con la geometría del archivo vectorial.  
+Es mas rápido cortar primero con `crop`, seguidamente de `mask`.
+```{r}
+Clima_Aragon <- mask(crop(Clima, Aragon), Aragon)
+plot(Clima_Aragon)
+```
+**Extraer información**
+Para extraer la información de un raster utilizando un poligono se utiliza la función `extract`.
+```{r, warning = FALSE}
+Temperatura_PNAC <- extract(Temperatura, PNAC, fun = mean, df = T)
+Temperatura_PNAC <- cbind(PNAC@data, Temperatura_PNAC)
+Temperatura_PNAC[,c(4,32)]
+```
+
+
+
