@@ -77,16 +77,17 @@ plot(PNAC, add = T, col = "green")
   
 **Cortar capas**
 ```{r, warning = FALSE, message = FALSE}
-PNAC_Aragon <- raster::intersect(Aragon, PNAC)
+PA_Aragon <- raster::intersect(Aragon, PA)
 
 plot(Aragon)
 plot(Spain, add = T)
 plot(Aragon, add= T, col= "red")
-plot(PNAC_Aragon, add = T, col = "green")
+plot(PA_Aragon, add = T, col = "green")
 ```
+  
 **Exportar**
 ```{r, eval = FALSE}
-writeOGR(Aragon, "E:/SEMINARIO_BIOGEOGRAFIA/Aragon.shp")
+writeOGR(PA_Aragon, "E:/SEMINARIO_BIOGEOGRAFIA/PA_Aragon.shp")
 ```
 
 # Raster
@@ -167,7 +168,8 @@ Es mas rápido cortar primero con `crop`, seguidamente de `mask`.
 Clima_Aragon <- mask(crop(Clima, Aragon), Aragon)
 plot(Clima_Aragon)
 ```
-**Extraer información**
+  
+**Extraer información**  
 Para extraer la información de un raster utilizando un poligono se utiliza la función `extract`.
 ```{r, warning = FALSE}
 Temperatura_PNAC <- extract(Temperatura, PNAC, fun = mean, df = T)
@@ -175,5 +177,8 @@ Temperatura_PNAC <- cbind(PNAC@data, Temperatura_PNAC)
 Temperatura_PNAC[,c(4,32)]
 ```
 
-
-
+# Materiales de aprendizaje  
+Geocomputation with R: https://geocompr.robinlovelace.net  
+Spatial Data Science with R: https://rspatial.org/raster/index.html  
+Rspatialdata: https://rspatialdata.github.io/index.html  
+Coding club: https://ourcodingclub.github.io/tutorials.html  
