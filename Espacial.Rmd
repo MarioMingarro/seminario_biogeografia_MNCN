@@ -2,18 +2,18 @@
 output: html_document
 ---
 
-# Vectorial  
 
+Cargar las librerías `sp` y `raster`.
 ```{r, warning = FALSE, message = FALSE}
-library(rgdal)
 library(sp)
 library(raster)
 ```
+# Vectorial  
 **Importar**  
-Para importar archivos `readOGR`, del paquete `rgdal`.  
+Para importar archivos `shapefile`, del paquete `raster``.  
 ```{r, warning = FALSE}
-Spain <- readOGR("E:/SEMINARIO_BIOGEOGRAFIA/SPAIN/spain.shp")
-PA <- readOGR("E:/SEMINARIO_BIOGEOGRAFIA/PNAC/PA_spain_89.shp")
+Spain <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/SPAIN/spain.shp")
+PA <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PNAC/PA_spain_89.shp")
 ```
 **Proyectar**  
 Para conocer el sistema de referencia `proj4string()`.  
@@ -87,7 +87,7 @@ plot(PA_Aragon, add = T, col = "green")
   
 **Exportar**
 ```{r, eval = FALSE}
-writeOGR(PA_Aragon, "E:/SEMINARIO_BIOGEOGRAFIA/PA_Aragon.shp")
+raster::shapefile(Aragon, "D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
 ```
 
 # Raster
@@ -95,8 +95,8 @@ writeOGR(PA_Aragon, "E:/SEMINARIO_BIOGEOGRAFIA/PA_Aragon.shp")
 **Importar**  
 Para importar archivos `raster` del paquete `raster`.  
 ```{r}
-Temperatura <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/Temperatura.tif")
-Precipitacion <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/Precipitacion.tif")
+Temperatura <- raster("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Temperatura.tif")
+Precipitacion <- raster("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Precipitacion.tif")
 ```
 
 **Visualizar**
@@ -155,7 +155,7 @@ plot(Variable)
   
 **Exportar**
 ```{r, eval = FALSE}
-writeRaster(Variable, "E:/SEMINARIO_BIOGEOGRAFIA/Variable.tif")
+writeRaster(Variable, "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Variable.tif")
 ```
 
 # Operaciones Vector-Raster  

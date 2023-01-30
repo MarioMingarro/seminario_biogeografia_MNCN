@@ -1,0 +1,107 @@
+---
+output: html_document
+---
+```{r, warning = FALSE, message = FALSE}
+library(raster)
+library(stringr)
+```
+
+Datos climáticos
+Existen multitud de datos climáticos. En este seminario se utilizarán los datos de Climatologies at high resolution for the earth’s land surface areas (CHELSA)
+https://chelsa-climate.org/timeseries/
+
+<img src="C:/GITHUB_REP/seminario_biogeografia_MNCN/Chelsa_1.jpg" width="800px">
+<img src="C:/GITHUB_REP/seminario_biogeografia_MNCN/Chelsa_2.jpg" width="800px">
+
+Cargamos el archivo`.txt` mediante la función `readLines`.
+```{r}
+download_chelsa <- readLines("C:/GITHUB_REP/seminario_biogeografia_MNCN/download_chelsa.txt")
+```
+Seleccionamos solo los años 1950 y 2018 para descargar solo esos datos.
+```{r}
+download_chelsa <- download_chelsa[grepl("1980|2018", download_chelsa)]
+```
+Preparar el área de estudio para extraer los datos solo de dicha región.
+En este caso se utilizará el archivo correspondiente a la comunidad autónoma de Aragón.
+```{r}
+Aragon <- raster::shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+```
+Ejemplo para un solo raster
+Descargar archivo mediante la función `download.file`.
+`dest`: Directorio donde se descargará el raster
+```{r, eval = FALSE}
+download.file(download_chelsa[1],
+              dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+              mode = "wb")
+```
+Cargar el raster previamente descargado
+```{r}
+raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+```
+Cortar el raster con el area de estudio, en este caso Aragon.  
+```{r}
+raster<- crop(raster, Aragon)
+raster_Aragon <- mask(raster, Aragon)
+```
+Visualuzar el raster generado.  
+```{r}
+plot(raster_Aragon)
+```
+  
+Modificar las unidades de la temperatura (*ºF x 10 -> ºC*).  
+```{r}
+raster_Aragon <- raster_Aragon / 10
+raster_Aragon <- raster_Aragon - 273.15
+```
+Visualuzar el raster generado.  
+```{r}
+plot(raster_Aragon)
+```
+Exportar el raster con la información del archivo descargado.  
+Ver la información que queremos conservar.  
+```{r}
+download_chelsa[1]
+```
+https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V2/GLOBAL/monthly/tasmin/CHELSA_tasmin_01_1980_V.2.1.tif  
+En nuestro caso queremos conservar la información de la variable *tmin* mes *01* y año *1980*.  
+Esta información corresponde a lo que viene después de *tasmin_* y antes de *_V.2*.  
+Para ello utilizamos la función `gregexpr` crea una lista donde se indica:  
+- La posición desde la que selecciona los datos.  
+- El numero de caracteres que coinciden.  
+```{r}
+gregexpr("tasmin_", download_chelsa[1])
+```
+La función `unlist` selecciona el primer elemento de la lista creada por la función `gregexpr`.  
+De esta manera se obtiene la posición.  
+Se puede modificar `+`o `-` la posición. Como no queremos la _ de _V.2 indicamos que sea hasta una posición aterior `-1`.  
+```{r}
+unlist(gregexpr("tasmin_", download_chelsa[1]))
+unlist(gregexpr("_V.2", download_chelsa[1])) - 1
+```
+Conociendo las posiciones entre las cuales queremos seleccionar, se utiliza la función `str_sub` de paquete `stringr`.  
+```{r}
+str_sub(download_chelsa[1],
+        unlist(gregexpr("tasmin_", download_chelsa[1])),
+        unlist(gregexpr("_V.2", download_chelsa[1])) - 1)
+```
+Ahora solo falta unir este nombre al directorio donde queremos guardarlo  
+La función `paste0`es una de las mas utiles para unir cadenas de texto  
+```{r}
+paste0(
+  "D:/SEMINARIO_BIOGEOGRAFIA/",
+  str_sub(download_chelsa[1],
+        unlist(gregexpr("tasmin_", download_chelsa[1])),
+        unlist(gregexpr("_V.2", download_chelsa[1])) - 1),
+  ".tif")
+```
+Teniendo el directorio acorde al archivo se introduce como directorio para guardar el raster.  
+
+```{r, eval =FALSE}
+writeRaster(raster_Aragon,
+              paste0("D:/SEMINARIO_BIOGEOGRAFIA/",
+                     str_sub(download_chelsa[1],
+                             unlist(gregexpr("tasmin_", download_chelsa[1])),
+                             unlist(gregexpr("_V.2", download_chelsa[1])) - 1),
+                     ".tif"))
+```
+
