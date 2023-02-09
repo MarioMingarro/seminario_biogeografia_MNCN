@@ -1,12 +1,16 @@
 ---
 output: html_document
 ---
+# Práctica 1: Descarga de datos climáticos para una región concreta, basada en bucles, mediante Rstudio.
+En esta práctica se aprenderá a descargar datos de manera eficaz. La forma tradicional, hasta ahora, ha sido la descarga de datos de manera manual. Sin embargo,existen maneras mucho más eficaces. Además, para evitar la descarga de datos innecesarios se guardarán solo los datos del area de estudio que nos interese.
+
+Cargar las librerías que se utilizarán  
 ```{r, warning = FALSE, message = FALSE}
 library(raster)
 library(stringr)
 ```
 
-Datos climáticos
+Datos climáticos  
 Existen multitud de datos climáticos. En este seminario se utilizarán los datos de Climatologies at high resolution for the earth’s land surface areas (CHELSA)
 https://chelsa-climate.org/timeseries/
 
@@ -17,7 +21,11 @@ Cargamos el archivo`.txt` mediante la función `readLines`.
 ```{r}
 download_chelsa <- readLines("C:/GITHUB_REP/seminario_biogeografia_MNCN/download_chelsa.txt")
 ```
-Seleccionamos solo los años 1950 y 2018 para descargar solo esos datos.
+Seleccionamos la variable que queremos descargar.  
+```{r}
+download_chelsa <- download_chelsa[grepl("tasmin", download_chelsa)]
+```
+Seleccionamos solo los años 1950 y 2018 para descargar solo esos datos.  
 ```{r}
 download_chelsa <- download_chelsa[grepl("1980|2018", download_chelsa)]
 ```
@@ -27,7 +35,7 @@ En este caso se utilizará el archivo correspondiente a la comunidad autónoma d
 Aragon <- raster::shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
 ```
 Ejemplo para un solo raster
-Descargar archivo mediante la función `download.file`.
+Descargar archivo mediante la función `download.file`. En este caso solo descargamos el primer dato de `download_chelsa` y se llamará `raster_temporal.tif`.
 `dest`: Directorio donde se descargará el raster
 ```{r, eval = FALSE}
 download.file(download_chelsa[1],
@@ -47,8 +55,8 @@ Visualuzar el raster generado.
 ```{r}
 plot(raster_Aragon)
 ```
-  
-Modificar las unidades de la temperatura (*ºF x 10 -> ºC*).  
+
+Modificar las unidades de la temperatura (*ºF x 10 = ºC*).  
 ```{r}
 raster_Aragon <- raster_Aragon / 10
 raster_Aragon <- raster_Aragon - 273.15
@@ -57,14 +65,15 @@ Visualuzar el raster generado.
 ```{r}
 plot(raster_Aragon)
 ```
+  
 Exportar el raster con la información del archivo descargado.  
 Ver la información que queremos conservar.  
 ```{r}
 download_chelsa[1]
 ```
 https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V2/GLOBAL/monthly/tasmin/CHELSA_tasmin_01_1980_V.2.1.tif  
-En nuestro caso queremos conservar la información de la variable *tmin* mes *01* y año *1980*.  
-Esta información corresponde a lo que viene después de *tasmin_* y antes de *_V.2*.  
+En nuestro caso queremos conservar la información de la variable `tmin` mes `01` y año `1980`.  
+Esta información corresponde a lo que viene después de `tasmin_` y antes de `_V.2`.  
 Para ello utilizamos la función `gregexpr` crea una lista donde se indica:  
 - La posición desde la que selecciona los datos.  
 - El numero de caracteres que coinciden.  
@@ -85,10 +94,10 @@ str_sub(download_chelsa[1],
         unlist(gregexpr("_V.2", download_chelsa[1])) - 1)
 ```
 Ahora solo falta unir este nombre al directorio donde queremos guardarlo  
-La función `paste0`es una de las mas utiles para unir cadenas de texto  
+La función `paste0`es una de las mas útiles para unir cadenas de texto  
 ```{r}
 paste0(
-  "D:/SEMINARIO_BIOGEOGRAFIA/",
+  "D:/SEMINARIO_BIOGEOGRAFIA//RASTER/TMIN",
   str_sub(download_chelsa[1],
         unlist(gregexpr("tasmin_", download_chelsa[1])),
         unlist(gregexpr("_V.2", download_chelsa[1])) - 1),
@@ -104,4 +113,134 @@ writeRaster(raster_Aragon,
                              unlist(gregexpr("_V.2", download_chelsa[1])) - 1),
                      ".tif"))
 ```
+Ahora que sabemos realizar la descarga y el posterior recorte con el área de estudio simplemente haría falta indicar que itere sobre todos los elementos de `download_chelsa`.  
+Para ello vamos a utilizar un bucle. Los bucles se utilizan en la programación para repetir un bloque específico de código.  
+Un ejemplo sencillo.  
+Para un numero (1 y 2 en este caso), muestra el resultado de esos números + 2.
+```{r}
+for(numero in c(1, 2)){
+  print(numero + 2)
+}
+```
+Aplicaremos esta lógica para la descarga de los datos climáticos.
+```{r, eval = FALSE}
+for (i in 1:length(download_chelsa)){
+  download.file(download_chelsa[i],
+              dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+              mode = "wb")
+  raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+  raster<- crop(raster, Aragon)
+  raster_Aragon <- mask(raster, Aragon)
+  raster_Aragon <- raster_Aragon / 10
+  raster_Aragon <- raster_Aragon - 273.15
+  
+  paste0(
+  "D:/SEMINARIO_BIOGEOGRAFIA//RASTER/TMIN/",
+  str_sub(download_chelsa[i],
+        unlist(gregexpr("tasmin_", download_chelsa[i])),
+        unlist(gregexpr("_V.2", download_chelsa[i])) - 1),
+  ".tif")
+}
+
+```
+
+A continuación se muestra el código completo de esta práctica.
+```{r, eval = FALSE}
+library(raster)
+library(stringr)
+download_chelsa <- readLines("C:/GITHUB_REP/seminario_biogeografia_MNCN/download_chelsa.txt")
+download_chelsa <- download_chelsa[grepl("1980|2018", download_chelsa)]
+
+Aragon <- raster::shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+
+# Temperatura mínima
+download_chelsa_tasmin <- download_chelsa[grepl("tasmin", download_chelsa)]
+
+for (i in 1:length(download_chelsa_tasmin)){
+  download.file(download_chelsa_tasmin[i],
+                dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+                mode = "wb")
+  raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+  raster<- crop(raster, Aragon)
+  raster_Aragon <- mask(raster, Aragon)
+  raster_Aragon <- raster_Aragon / 10
+  raster_Aragon <- raster_Aragon - 273.15
+  
+  writeRaster(raster_Aragon,
+              paste0(
+                "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/",
+                str_sub(
+                  download_chelsa_tasmin[i],
+                  unlist(gregexpr("tasmin_", download_chelsa_tasmin[i])),
+                  unlist(gregexpr("_V.2", download_chelsa_tasmin[i])) - 1),
+                ".tif"))
+}
+
+# Precipitación
+download_chelsa_pr <- download_chelsa[grepl("pr", download_chelsa)]
+
+for (i in 1:length(download_chelsa_pr)){
+  download.file(download_chelsa_pr[i],
+                dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+                mode = "wb")
+  raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+  raster<- crop(raster, Aragon)
+  raster_Aragon <- mask(raster, Aragon)
+  raster_Aragon <- raster_Aragon / 10
+  
+  writeRaster(raster_Aragon,
+              paste0(
+                "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/",
+                str_sub(
+                  download_chelsa_pr[i],
+                  unlist(gregexpr("pr_", download_chelsa_pr[i])),
+                  unlist(gregexpr("_V.2", download_chelsa_pr[i])) - 1),
+                ".tif"))
+}
+
+```
+# Ejercicio práctica 1
+Descargar la capa de temperatura máxima de enero de 2012 para la comunidad autónoma de Aragón y guardarla como `tmax_aragon_1_2012.tif`, en una nueva carpeta llamada `Practica_1` 
+Ejemplo (modificar XXX):
+```{r, eval = FALSE}
+library(raster)
+library(stringr)
+download_chelsa <- readLines("C:/GITHUB_REP/seminario_biogeografia_MNCN/XXX.txt")
+download_chelsa <- download_chelsa[grepl("XXX", download_chelsa)]
+
+Aragon <- raster::shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+download.file(XXX,
+                dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+                mode = "wb")
+  raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+  raster <- crop(XXX, XXX)
+  raster_Aragon <- mask(XXX, XXX)
+  raster_Aragon <- raster_Aragon / 10
+  raster_Aragon <- raster_Aragon - 273.15
+  
+  writeRaster(raster_Aragon, "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/XXX")
+            
+```
+Solución:
+```{r, eval = FALSE}
+library(raster)
+library(stringr)
+# Descargar un nuevo .txt de la temperatura máxima 
+download_chelsa <- readLines("C:/GITHUB_REP/seminario_biogeografia_MNCN/download_chelsa_2.txt")
+download_chelsa <- download_chelsa[grepl("01_2012", download_chelsa)]
+
+Aragon <- raster::shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+download.file(download_chelsa,
+                dest = "D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif",
+                mode = "wb")
+  raster <- raster("D:/SEMINARIO_BIOGEOGRAFIA/raster_temporal.tif")
+  raster <- crop(raster, Aragon)
+  raster_Aragon <- mask(raster, Aragon)
+  raster_Aragon <- raster_Aragon / 10
+  raster_Aragon <- raster_Aragon - 273.15
+  
+  writeRaster(raster_Aragon, "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Practica_1/tmax_aragon_1_2012.tif")
+            
+```
+
 

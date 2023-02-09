@@ -1,0 +1,70 @@
+---
+output: html_document
+---
+# Práctica 2. Extracción, y posterior visualización de valores de temperatura en localidades concretas.
+
+Cargar las librerías que se utilizarán  
+```{r, warning = FALSE, message = FALSE}
+library(raster)
+```
+Cargar archivos
+```{r}
+PA <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PNAC/PA_spain_89.shp")
+Aragon <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+puntos <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PUNTOS/puntos.shp")
+```
+
+Sistemas de referencia
+```{r}
+proj4string(PA)
+proj4string(Aragon)
+proj4string(puntos)
+```
+Modificar sistema de referencia
+```{r}
+Aragon <- spTransform(Aragon, CRS("+init=epsg:25830"))
+```
+Visualizar los datos a utilizar.
+```{r}
+plot(Aragon)
+plot(PA, col = "green", add= T)
+plot(puntos, col = "red", add= T)
+```
+
+Extraer información.
+```{r}
+PA_Aragon <- raster::intersect(Aragon, PA)
+
+puntos_PA_aragon <- raster::intersect(puntos, PA_Aragon)
+```
+
+Visualizar los nuevos datos generados.
+```{r}
+plot(Aragon)
+plot(PA_Aragon, col = "green", add= T)
+plot(puntos, col = "black", add= T)
+plot(puntos_PA_aragon, col = "red", add= T)
+```
+  
+Obtener valores anuales a partir de valores mensuales  
+Precipitacion
+```{r, eval = FALSE}
+PCP_anual <- raster::stack()
+for (i in c(1980, 2018)){
+  raster <- calc(raster::stack(list.files("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/", pattern = paste0("pr| ", i), full.names = TRUE)), sum)
+  PCP_anual <- raster::stack(PCP_anual, raster)
+}
+names(PCP_anual) <- paste0("Y_", c(1980,2018))
+plot(PCP_anual)
+```
+Temperatura mínima del mes mas frío.
+```{r, eval = FALSE}
+Tmin_mes_frio <- raster::stack()
+for (i in c(1980, 2018)){
+  raster <- calc(raster::stack(list.files("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/", pattern = paste0("tasmin| ", i), full.names = TRUE)), min)
+  Tmin_mes_frio <- raster::stack(Tmin_mes_frio, raster)
+}
+names(Tmin_mes_frio) <- paste0("Y_", c(1980,2018))
+plot(Tmin_mes_frio)
+```
+
