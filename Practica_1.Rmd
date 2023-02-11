@@ -135,7 +135,7 @@ for (i in 1:length(download_chelsa)){
   raster_Aragon <- raster_Aragon - 273.15
   
   paste0(
-  "D:/SEMINARIO_BIOGEOGRAFIA//RASTER/TMIN/",
+  "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/TMIN/",
   str_sub(download_chelsa[i],
         unlist(gregexpr("tasmin_", download_chelsa[i])),
         unlist(gregexpr("_V.2", download_chelsa[i])) - 1),

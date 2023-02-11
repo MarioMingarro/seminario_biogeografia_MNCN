@@ -2,69 +2,112 @@
 output: html_document
 ---
 # Práctica 2. Extracción, y posterior visualización de valores de temperatura en localidades concretas.
+En esta práctica se utilizarán los archivos de temeratura mínima y precipitación de Aragón correspondientes a los años 1980 y 2018. Posteriormente se generarán nuevas variables, se extraerán los valores para unas localidades concretas y se visualizarán los reusltados.
 
-Cargar las librerías que se utilizarán  
+Cargar las librerías.   
 ```{r, warning = FALSE, message = FALSE}
 library(raster)
+library(ggplot2)
 ```
-Cargar archivos
-```{r}
-PA <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PNAC/PA_spain_89.shp")
-Aragon <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
-puntos <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PUNTOS/puntos.shp")
+**Cargar archivos vectoriales**  
+```{r, warning = FALSE, message = FALSE}
+PA <- shapefile("E:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/AP/AP_spain.shp")
+Aragon <- shapefile("E:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/ARAGON/Aragon.shp")
+puntos <- shapefile("E:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PUNTOS/puntos.shp")
 ```
 
-Sistemas de referencia
-```{r}
+Sistemas de referencia.  
+```{r, warning = FALSE, message = FALSE}
 proj4string(PA)
 proj4string(Aragon)
 proj4string(puntos)
 ```
-Modificar sistema de referencia
-```{r}
+Modificar sistema de referencia.  
+```{r, warning = FALSE, message = FALSE}
 Aragon <- spTransform(Aragon, CRS("+init=epsg:25830"))
 ```
-Visualizar los datos a utilizar.
-```{r}
+Visualizar los datos a utilizar.  
+```{r, warning = FALSE, message = FALSE}
 plot(Aragon)
 plot(PA, col = "green", add= T)
 plot(puntos, col = "red", add= T)
 ```
-
-Extraer información.
-```{r}
+  
+Extraer información.  
+```{r, warning = FALSE, message = FALSE}
 PA_Aragon <- raster::intersect(Aragon, PA)
-
 puntos_PA_aragon <- raster::intersect(puntos, PA_Aragon)
 ```
-
-Visualizar los nuevos datos generados.
-```{r}
+Visualizar los nuevos datos generados.  
+```{r, warning = FALSE, message = FALSE}
 plot(Aragon)
 plot(PA_Aragon, col = "green", add= T)
 plot(puntos, col = "black", add= T)
 plot(puntos_PA_aragon, col = "red", add= T)
 ```
   
-Obtener valores anuales a partir de valores mensuales  
-Precipitacion
-```{r, eval = FALSE}
-PCP_anual <- raster::stack()
-for (i in c(1980, 2018)){
-  raster <- calc(raster::stack(list.files("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/", pattern = paste0("pr| ", i), full.names = TRUE)), sum)
-  PCP_anual <- raster::stack(PCP_anual, raster)
-}
-names(PCP_anual) <- paste0("Y_", c(1980,2018))
-plot(PCP_anual)
+**Obtener la temperatura minima promedio anual para Aragón.**  
+De manera individual:  
+Mediante la función `list.files` buscar los archivos que coincidan con el año indicado en `pattern`.  
+```{r, warning = FALSE, message = FALSE}
+nombres <- list.files("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/ARAGON/TEMPERATURA_MINIMA/", 
+                      pattern = "1980" , 
+                      full.names = TRUE)
 ```
-Temperatura mínima del mes mas frío.
-```{r, eval = FALSE}
-Tmin_mes_frio <- raster::stack()
-for (i in c(1980, 2018)){
-  raster <- calc(raster::stack(list.files("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/", pattern = paste0("tasmin| ", i), full.names = TRUE)), min)
-  Tmin_mes_frio <- raster::stack(Tmin_mes_frio, raster)
-}
-names(Tmin_mes_frio) <- paste0("Y_", c(1980,2018))
-plot(Tmin_mes_frio)
+Con la función `stack` se agrupan en un mismo objeto todos los archivos seleccionados en el objeto nombre.  
+```{r, warning = FALSE, message = FALSE}
+Temperatura_minima <- stack(nombres)
 ```
+Mediante la función `calc` se genra un nuevo raster promedio (mean) de todos los raster que componen el stack.  
+```{r, warning = FALSE, message = FALSE}
+Temperatura_minima_anual <- calc(Temperatura_minima, mean)
+```
+```{r, warning = FALSE, message = FALSE}
+plot(Temperatura_minima_anual)
+```
+  
+Para varios años:  
+Para hacer esto de manera automática es necesario hacerlo mediante un bucle que itere sobre los diferentes años.  
+El primer paso es crear un stack vacio donde se almacenarán los resultados.  
+```{r, warning = FALSE, message = FALSE}
+Temperatura_minima_anual <- raster::stack()
+```
+Mediante el bucle se ejecutará el mismo proceso cambiando diferentes años (llamados `i`) y se irán guardando en el stack vacio  `Temperatura_minima_anual` creado.  
+```{r, warning = FALSE, message = FALSE}
+for (i in c(1980, 2018)){
+  nombres <- list.files("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/ARAGON/TEMPERATURA_MINIMA/", 
+                        pattern = paste0(i) , 
+                        full.names = TRUE)
+  Temperatura_minima <- stack(nombres)
+  Temperatura_minima <- calc(Temperatura_minima, mean)
+  Temperatura_minima_anual <- raster::stack(Temperatura_minima_anual, Temperatura_minima)
+}
+```
+El último paso sería modificar los nombres de los diferentes rasters generados.  
+```{r, warning = FALSE, message = FALSE}
+names(Temperatura_minima_anual) <- c("TMIN_1980", "TMIN_2018")
+```
+```{r, warning = FALSE, message = FALSE}
+plot(Temperatura_minima_anual)
+```
+  
+Hacemos lo mismo para la precipitación.  
+```{r, warning = FALSE, message = FALSE}
+Precipitacion_anual <- raster::stack()
+for (i in c(1980, 2018)){
+  nombres <- list.files("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/ARAGON/PRECIPITACION/", 
+                        pattern = paste0(i), 
+                        full.names = TRUE)
+  Precipitacion <- stack(nombres)
+  Precipitacion <- calc(Precipitacion, sum)
+  Precipitacion <- Precipitacion / 10
+  Precipitacion_anual <- raster::stack(Precipitacion_anual, Precipitacion)
+}
+
+names(Precipitacion_anual) <- c("PR_1980", "PR_2018")
+```
+```{r, warning = FALSE, message = FALSE}
+plot(Precipitacion_anual)
+```
+
 

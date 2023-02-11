@@ -35,10 +35,7 @@ Se puede hacer de manera manual `Ctrl + Shift + H`.
 ```{r, eval = FALSE, warning = FALSE, message = FALSE}
 setwd("C:/NUEVO_DIRECTORIO")
 ```
-**Ajusta la carpeta de trabajo a la localización de este script**
-```{r, eval = FALSE, warning = FALSE, message = FALSE}
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-```
+
 Más Información: https://r-coder.com/working-directory-r/
 
 # Instalación de paquetes R
@@ -81,19 +78,19 @@ Más Información:https://r-coder.com/help-r/
 ### Vector
 Los vectores son la estructura de datos más básica en R. Estas estructuras permiten concatenar datos.
 ```{r, warning = FALSE, message = FALSE}
-numero <- c(1, 2, 3)
-caracter <- c("a","b", "AbC")
+numeros <- c(1, 2, 3)
+caracteres <- c("a","b", "AbC")
 vector <- c(1, "ae", "2a")
 ```
 ```{r, warning = FALSE, message = FALSE}
-numero
-caracter
+numeros
+caracteres
 vector
 ```
-**Verificar el tipo de vector**
+**Conocer el tipo de vector**
 ```{r,  warning = FALSE, message = FALSE}
-class(numero)
-class(caracter)
+class(numeros)
+class(caracteres)
 class(vector)
 ```
 **Conocer la longitud del vector**
@@ -107,15 +104,14 @@ vector[3]
 Más información: https://r-coder.com/vector-r/
 
 ### Marco de datos en R
-Los marcos de datos son el objeto más habitual para almacenar datos en R. Este tipo de objeto está formado por filas y columnas.
+Los marcos de datos mas conocidos como dataframes son el objeto más habitual para almacenar datos en R. Este tipo de objeto está formado por filas y columnas.  
 
-**Crear marco de datos vacío**
+**Crear marco de datos vacío**  
 ```{r,  warning = FALSE, message = FALSE}
 marco_datos <- data.frame(Nombre = character(),
                           Edad = numeric())
-marco_datos
 ```
-**Añadir datos al marco de datos vacío**
+**Añadir datos al marco de datos vacío**  
 ```{r,  warning = FALSE, message = FALSE}
 marco_datos[1,1] <- "Mario"
 marco_datos[1,2] <- 12
@@ -123,12 +119,39 @@ marco_datos[2,1] <- "Maria"
 marco_datos[2,2] <- 21
 marco_datos
 ```
-**Acceder a los datos del marco de datos**
+**Añadir datos de un vector al marco de datos vacío**  
+La funcion `cbin` añade una nueva columna.  
+ 
+```{r,  warning = FALSE, message = FALSE}
+peso <- c(10,16)
+marco_datos <- cbind(marco_datos, peso)
+```
+La función `rbind` añade una nueva fila.  
+```{r,  warning = FALSE, message = FALSE}
+marco_datos <- rbind(marco_datos, c("Marie", 22, 15))
+```
+```{r,  warning = FALSE, message = FALSE}
+marco_datos
+```
+La función `colnames` modifica los nombres de las columnas.  
+```{r,  warning = FALSE, message = FALSE}
+colnames(marco_datos) <- c("Columna_1", "Columna_2", "Columna_3")
+```
+La función `rownames` modifica los nombres de las filas.  
+```{r,  warning = FALSE, message = FALSE}
+rownames(marco_datos)<- c("Fila_1", "Fila_2", "Fila_3")
+```
+```{r,  warning = FALSE, message = FALSE}
+marco_datos
+```
+**Acceder a los datos del marco de datos**  
+Las posiciones del marco de datos se indican con los corchetes `[]`.  
+La fila se indica antes de la coma `[fila , ]`.  
+La columna se indica después de la coma `[ , columna]`.
 ```{r, warning = FALSE, message = FALSE}
 marco_datos[1,1]     # Fila 1 y columna 1
 marco_datos[1, ]     # Fila 1 todas las columnas
 marco_datos[ ,2]     # Todas las filas y columna 2
-marco_datos$Nombre   # Todos los datos de la variable Nombre
 ```
 **Exportar los datos**  
 Utilizar la función `write_xlsx` del paquete `writexl`.    

@@ -403,8 +403,6 @@ Es importante señalar que las rutas en R se hacen indican con <code>/</code>.</
 <p><strong>Modificar la ruta del directorio de trabajo</strong><br />
 Se puede hacer de manera manual <code>Ctrl + Shift + H</code>.</p>
 <pre class="r"><code>setwd(&quot;C:/NUEVO_DIRECTORIO&quot;)</code></pre>
-<p><strong>Ajusta la carpeta de trabajo a la localización de este script</strong></p>
-<pre class="r"><code>setwd(dirname(rstudioapi::getActiveDocumentContext()$path))</code></pre>
 <p>Más Información: <a href="https://r-coder.com/working-directory-r/" class="uri">https://r-coder.com/working-directory-r/</a></p>
 </div>
 <div id="instalación-de-paquetes-r" class="section level1">
@@ -437,19 +435,19 @@ Se puede hacer de manera manual <code>Tools</code>- <code>Install Packages...</c
 <div id="vector" class="section level3">
 <h3>Vector</h3>
 <p>Los vectores son la estructura de datos más básica en R. Estas estructuras permiten concatenar datos.</p>
-<pre class="r"><code>numero &lt;- c(1, 2, 3)
-caracter &lt;- c(&quot;a&quot;,&quot;b&quot;, &quot;AbC&quot;)
+<pre class="r"><code>numeros &lt;- c(1, 2, 3)
+caracteres &lt;- c(&quot;a&quot;,&quot;b&quot;, &quot;AbC&quot;)
 vector &lt;- c(1, &quot;ae&quot;, &quot;2a&quot;)</code></pre>
-<pre class="r"><code>numero</code></pre>
+<pre class="r"><code>numeros</code></pre>
 <pre><code>## [1] 1 2 3</code></pre>
-<pre class="r"><code>caracter</code></pre>
+<pre class="r"><code>caracteres</code></pre>
 <pre><code>## [1] &quot;a&quot;   &quot;b&quot;   &quot;AbC&quot;</code></pre>
 <pre class="r"><code>vector</code></pre>
 <pre><code>## [1] &quot;1&quot;  &quot;ae&quot; &quot;2a&quot;</code></pre>
-<p><strong>Verificar el tipo de vector</strong></p>
-<pre class="r"><code>class(numero)</code></pre>
+<p><strong>Conocer el tipo de vector</strong></p>
+<pre class="r"><code>class(numeros)</code></pre>
 <pre><code>## [1] &quot;numeric&quot;</code></pre>
-<pre class="r"><code>class(caracter)</code></pre>
+<pre class="r"><code>class(caracteres)</code></pre>
 <pre><code>## [1] &quot;character&quot;</code></pre>
 <pre class="r"><code>class(vector)</code></pre>
 <pre><code>## [1] &quot;character&quot;</code></pre>
@@ -463,13 +461,10 @@ vector &lt;- c(1, &quot;ae&quot;, &quot;2a&quot;)</code></pre>
 </div>
 <div id="marco-de-datos-en-r" class="section level3">
 <h3>Marco de datos en R</h3>
-<p>Los marcos de datos son el objeto más habitual para almacenar datos en R. Este tipo de objeto está formado por filas y columnas.</p>
+<p>Los marcos de datos mas conocidos como dataframes son el objeto más habitual para almacenar datos en R. Este tipo de objeto está formado por filas y columnas.</p>
 <p><strong>Crear marco de datos vacío</strong></p>
 <pre class="r"><code>marco_datos &lt;- data.frame(Nombre = character(),
-                          Edad = numeric())
-marco_datos</code></pre>
-<pre><code>## [1] Nombre Edad  
-## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+                          Edad = numeric())</code></pre>
 <p><strong>Añadir datos al marco de datos vacío</strong></p>
 <pre class="r"><code>marco_datos[1,1] &lt;- &quot;Mario&quot;
 marco_datos[1,2] &lt;- 12
@@ -479,16 +474,37 @@ marco_datos</code></pre>
 <pre><code>##   Nombre Edad
 ## 1  Mario   12
 ## 2  Maria   21</code></pre>
-<p><strong>Acceder a los datos del marco de datos</strong></p>
+<p><strong>Añadir datos de un vector al marco de datos vacío</strong><br />
+La funcion <code>cbin</code> añade una nueva columna.</p>
+<pre class="r"><code>peso &lt;- c(10,16)
+marco_datos &lt;- cbind(marco_datos, peso)</code></pre>
+<p>La función <code>rbind</code> añade una nueva fila.</p>
+<pre class="r"><code>marco_datos &lt;- rbind(marco_datos, c(&quot;Marie&quot;, 22, 15))</code></pre>
+<pre class="r"><code>marco_datos</code></pre>
+<pre><code>##   Nombre Edad peso
+## 1  Mario   12   10
+## 2  Maria   21   16
+## 3  Marie   22   15</code></pre>
+<p>La función <code>colnames</code> modifica los nombres de las columnas.</p>
+<pre class="r"><code>colnames(marco_datos) &lt;- c(&quot;Columna_1&quot;, &quot;Columna_2&quot;, &quot;Columna_3&quot;)</code></pre>
+<p>La función <code>rownames</code> modifica los nombres de las filas.</p>
+<pre class="r"><code>rownames(marco_datos)&lt;- c(&quot;Fila_1&quot;, &quot;Fila_2&quot;, &quot;Fila_3&quot;)</code></pre>
+<pre class="r"><code>marco_datos</code></pre>
+<pre><code>##        Columna_1 Columna_2 Columna_3
+## Fila_1     Mario        12        10
+## Fila_2     Maria        21        16
+## Fila_3     Marie        22        15</code></pre>
+<p><strong>Acceder a los datos del marco de datos</strong><br />
+Las posiciones del marco de datos se indican con los corchetes <code>[]</code>.<br />
+La fila se indica antes de la coma <code>[fila , ]</code>.<br />
+La columna se indica después de la coma <code>[ , columna]</code>.</p>
 <pre class="r"><code>marco_datos[1,1]     # Fila 1 y columna 1</code></pre>
 <pre><code>## [1] &quot;Mario&quot;</code></pre>
 <pre class="r"><code>marco_datos[1, ]     # Fila 1 todas las columnas</code></pre>
-<pre><code>##   Nombre Edad
-## 1  Mario   12</code></pre>
+<pre><code>##        Columna_1 Columna_2 Columna_3
+## Fila_1     Mario        12        10</code></pre>
 <pre class="r"><code>marco_datos[ ,2]     # Todas las filas y columna 2</code></pre>
-<pre><code>## [1] 12 21</code></pre>
-<pre class="r"><code>marco_datos$Nombre   # Todos los datos de la variable Nombre</code></pre>
-<pre><code>## [1] &quot;Mario&quot; &quot;Maria&quot;</code></pre>
+<pre><code>## [1] &quot;12&quot; &quot;21&quot; &quot;22&quot;</code></pre>
 <p><strong>Exportar los datos</strong><br />
 Utilizar la función <code>write_xlsx</code> del paquete <code>writexl</code>.</p>
 <pre class="r"><code>library(writexl)
