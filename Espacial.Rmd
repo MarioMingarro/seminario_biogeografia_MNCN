@@ -10,34 +10,38 @@ library(raster)
 ```
 # Vectorial  
 **Importar**  
-Para importar archivos `shapefile`, del paquete `raster``.  
+Para importar archivos `shapefile`, del paquete `raster`.  
+Cargamos los archivos vectoriales de las comunidades autónomas `spain.shp` y los parques naturales y nacionales `AP_spain.shp` de España.  
 ```{r, warning = FALSE}
-Spain <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/SPAIN/spain.shp")
-PA <- shapefile("D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PNAC/PA_spain_89.shp")
+Spain <- raster::shapefile("E:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/SPAIN/spain.shp")
+PA <- shapefile("E:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/PNAC/AP_spain.shp")
 ```
+
+**Visualizar**
+```{r}
+plot(Spain)
+plot(PA)
+```  
+  
 **Proyectar**  
 Para conocer el sistema de referencia `proj4string()`.  
 ```{r, warning = FALSE}
 proj4string(Spain)
 proj4string(PA)
 ```
-Para modificar el sistema de referencia.  
+Para modificar el sistema de referencia `spTransform` se utiliza el código EPSG (https://spatialreference.org/ref/epsg).  
 *WGS84 (Lat/Long): 4326*  
-*ETRS89/UTMz30N: 25830*  
+*ETRS89/UTM 30N: 25830*  
 ```{r, warning = FALSE}
 Spain <- spTransform(Spain, CRS("+init=epsg:25830"))
 ```   
 Si se quiere utilizar el sistema de referencia de otra capa.  
+En lugar de indicar el sistema de referencia, mediante las funciónes `CRS` y `proj4string`, se utiliza el sistema de referencia de otra capa.
 ```{r, warning = FALSE, eval = FALSE}
 Spain <- spTransform(Spain,
                      CRS(proj4string(PA)))
 ```
 
-**Visualizar**
-```{r}
-plot(Spain)
-```  
-  
 **Variables del objeto**  
 Para acceder a las variables del objeto se utiliza `@` (`Spain@`) o la función `slotNames`.  
 -`data`: Tabla de atributos  
@@ -56,38 +60,44 @@ Spain@bbox
 **Tabla de atributos**  
 Para acceder a la tabla de atributos se utiliza `$`(`Spain@data$NAME`o directamente `Spain$NAME` ).  
 ```{r}
-Spain$NAME
+Spain@data
 ```
-Cuando tenemos muchos atributos. 
 ```{r}
-length(PA$DESIG_ENG)
-unique(PA$DESIG_ENG)
+Spain$CCAA
 ```
-Seleccionar objetos en la tabla de atributos.  
+Seleccionar objetos en la tabla de atributos. 
+Seleccionamos la comunidad autónoma de Aragón y los parques nacionales.
 ```{r}
-Aragon <- Spain[Spain$NAME == "Aragon", ]
-PNAC <- PA[PA$DESIG_ENG == "Nacional Park", ]
+Aragon <- Spain[Spain$CCAA == "Aragon", ]
+PNAC <- PA[PA$FIGURA == "Parque Nacional", ]
 ```
 **Visualizar varias capas**  
+Para visualizar varias capas superpuestas utilizar `add = TRUE`.  
 ```{r}
 plot(Spain)
 plot(Aragon, add = T, col = "red")
+plot(PA, add= T, col = "darkorange1")
 plot(PNAC, add = T, col = "green")
 ```  
   
-**Cortar capas**
+**Cortar capas**  
+Para cortar dos archivos vectoriales se puede utilizar la función `intersect` del paquete `raster`.
 ```{r, warning = FALSE, message = FALSE}
 PA_Aragon <- raster::intersect(Aragon, PA)
+```
 
+```{r, warning = FALSE, message = FALSE}
 plot(Aragon)
 plot(Spain, add = T)
 plot(Aragon, add= T, col= "red")
 plot(PA_Aragon, add = T, col = "green")
 ```
   
-**Exportar**
+**Exportar**  
+Para exportar archivos vectoriales utilizar la función `shapefile` del paquete `raster`.
 ```{r, eval = FALSE}
-raster::shapefile(Aragon, "D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
+
+raster::shapefile(Aragon, filename = "E:/SEMINARIO_BIOGEOGRAFIA/RESULTADOS/Aragon.shp", overwrite = TRUE)
 ```
 
 # Raster
@@ -95,87 +105,114 @@ raster::shapefile(Aragon, "D:/SEMINARIO_BIOGEOGRAFIA/VECTORIAL/Aragon.shp")
 **Importar**  
 Para importar archivos `raster` del paquete `raster`.  
 ```{r}
-Temperatura <- raster("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Temperatura.tif")
-Precipitacion <- raster("D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Precipitacion.tif")
+Temperatura_maxima <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/SPAIN/TEMPERATURA_MAXIMA.tif")
+Temperatura_minima <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RASTER/SPAIN/TEMPERATURA_MINIMA.tif")
 ```
 
 **Visualizar**
 ```{r}
-plot(Temperatura)  
+plot(Temperatura_maxima)  
+plot(Temperatura_minima)  
 ```
   
-**Variables del objeto**  
-Para acceder a las variables del objeto se utiliza `@` (`Temperatura@`) o la función `slotNames`.
+Es posible delimitar los rangos a graficar con el parámetro `zlim`.  
+En este caso se visualizan los pixeles que superan los 30ºC (ºC x 10).  
 ```{r}
-slotNames(Temperatura)
+plot(Temperatura_maxima, zlim = c(300, 450))
 ```
-Para conocer las coordenadas de los extremos del raster
-```{r}
-Temperatura@extent
-```
-
 
 **Unir varios raster en un objeto**   
 Esto es muy util para trabajar con varios raster a la vez.  
 ```{r}
-Clima <- stack(Temperatura, Precipitacion)
-plot(Clima)
-Clima
+Temperatura <- stack(Temperatura_maxima, Temperatura_minima)
+plot(Temperatura)
 ```
+  
 **Proyectar**  
-Para conocer el sistema de referencia `projection()`.  
+Para conocer el sistema de referencia `projection()`. Esto difiere de los archivos vectoriales.    
 ```{r, warning = FALSE}
-projection(Clima)
+projection(Temperatura)
 ```
 Para modificar el sistema de referencia.  
 ```{r, warning = FALSE}
-Clima <- projectRaster(Clima, crs = "+init=epsg:25830")
-Clima
+Temperatura <- projectRaster(Temperatura, crs = "+init=epsg:25830")
 ```
 **Algebra raster**  
-Las operaciones sobre los raster se ejecutan directamente sobre el objeto.
+Las operaciones sobre los raster se ejecutan directamente sobre el objeto.  
+En este caso transformamos de ºC x 10 a ºC.  
 ```{r}
-Clima$Temperatura <- Clima$Temperatura / 10
+Temperatura$TEMPERATURA_MAXIMA <- Temperatura$TEMPERATURA_MAXIMA / 10
+Temperatura$TEMPERATURA_MINIMA <- Temperatura$TEMPERATURA_MINIMA / 10
 ```
-De igual manera se ejecutan las operaciones entre rasters.
+Es posible obetener algunas estadísticas básicas `min()`, `max()`, `mean()`, `median()`, `sum()`,`range()` (entre otras) para conocer los raster.
+Estas estadísticas son de todo el raster, en este caso la temperatura media de España.
 ```{r}
-Aridez <- Clima$Precipitacion / Clima$Temperatura
-plot(Aridez, zlim = c(-300, 400))  
+cellStats(Temperatura$TEMPERATURA_MAXIMA, "mean")
 ```
-  
-Estadísticas básicas `min()`, `max()`, `mean()`, `median()`, `sum()`,`range()` (entre otras) para conocer los raster.
+
+Para ejecutar operaciones entre rasters.   
+Se puede actuar directamente sobre los rasters. 
 ```{r}
-cellStats(Clima, "mean")
+Temperatura_media <-  (Temperatura$TEMPERATURA_MAXIMA + Temperatura$TEMPERATURA_MINIMA) / 2
 ```
-Para calcular estadísticas entre raster se utiliza la función `calc` del paquete `raster`.
+
+Se puede utilizas la función `calc` del paquete `raster`.
 ```{r}
-Variable <- calc(Clima, mean)
-plot(Variable)
+Temperatura_media_2 <- calc(Temperatura, mean)
 ```
+```{r}
+plot(Temperatura_media)
+plot(Temperatura_media_2)
+```
+
   
 **Exportar**
 ```{r, eval = FALSE}
-writeRaster(Variable, "D:/SEMINARIO_BIOGEOGRAFIA/RASTER/Variable.tif")
+writeRaster(Temperatura_media, "E:/SEMINARIO_BIOGEOGRAFIA/RESULTADOS/Temperatura_media.tif")
 ```
 
 # Operaciones Vector-Raster  
 **Cortar**  
 Cortar capa raster a partir de capa vectorial.  
- -`crop`corta con el extend de archivo vectorial.  
- -`mask`corta con la geometría del archivo vectorial.  
-Es mas rápido cortar primero con `crop`, seguidamente de `mask`.
+La función `crop` corta con el extend (bbox) de archivo vectorial.  
 ```{r}
-Clima_Aragon <- mask(crop(Clima, Aragon), Aragon)
-plot(Clima_Aragon)
+Temperatura_Aragon <- crop(Temperatura_media, Aragon)
+plot(Temperatura_Aragon)
+```
+
+La función `mask` corta con la geometría del archivo vectorial. 
+```{r}
+Temperatura_Aragon <- mask(Temperatura_media, Aragon)
+plot(Temperatura_Aragon)
+```
+  
+Es mas rápido cortar primero con `crop`, seguidamente de `mask`.  
+```{r}
+Temperatura_Aragon <- mask(crop(Temperatura_media,
+                                Aragon),
+                           Aragon)
+plot(Temperatura_Aragon)
 ```
   
 **Extraer información**  
 Para extraer la información de un raster utilizando un poligono se utiliza la función `extract`.
+En este caso extraemos la temperatura de las áreas protegidas de Aragón.  
 ```{r, warning = FALSE}
-Temperatura_PNAC <- extract(Temperatura, PNAC, fun = mean, df = T)
-Temperatura_PNAC <- cbind(PNAC@data, Temperatura_PNAC)
-Temperatura_PNAC[,c(4,32)]
+Temperatura_PA <- extract(Temperatura_media, PA_Aragon, fun = mean, df = T)
 ```
+Unimos los nombres de las áreas protegidas `PA_Aragon$NOMBRE` con los resultados `Temperatura_PA`, mediante la funcion `cbind`.
+```{r}
+Temperatura_PA <- cbind(PA_Aragon$NOMBRE, Temperatura_PA)
+```
+Eliminamos columna 3 y modificamos el nombre de las columnas
+```{r}
+Temperatura_PA <- Temperatura_PA[,-2]
+colnames(Temperatura_PA) <- c("AREA PROTEGIDA", "TEMPERATURA")
+```
+```{r}
+Temperatura_PA
+```
+
 
 # Materiales de aprendizaje  
 Geocomputation with R: https://geocompr.robinlovelace.net  
