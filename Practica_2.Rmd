@@ -8,6 +8,8 @@ Cargar las librerías.
 ```{r, warning = FALSE, message = FALSE}
 library(raster)
 library(ggplot2)
+library(reshape2)
+library(ggpubr)
 ```
 **Cargar archivos vectoriales**  
 ```{r, warning = FALSE, message = FALSE}
@@ -38,6 +40,7 @@ Extraer información.
 PA_Aragon <- raster::intersect(Aragon, PA)
 puntos_PA_aragon <- raster::intersect(puntos, PA_Aragon)
 ```
+
 Visualizar los nuevos datos generados.  
 ```{r, warning = FALSE, message = FALSE}
 plot(Aragon)
@@ -109,5 +112,135 @@ names(Precipitacion_anual) <- c("PR_1980", "PR_2018")
 ```{r, warning = FALSE, message = FALSE}
 plot(Precipitacion_anual)
 ```
+**Extracccion de datos raster utilizando un archivo vectorial**  
+Para ello, primero extraemos la temperatura y despues añadimos la información existente en la tabla de atributos.  
+Temperatura.  
+```{r, warning = FALSE, message = FALSE}
+Temperatura_minima_anual_PA <- extract(Temperatura_minima_anual, puntos_PA_aragon, fun = mean, df = T)
+Temperatura_minima_anual_PA <- cbind(Temperatura_minima_anual_PA, puntos_PA_aragon@data)
+```
+Precipitación.  
+```{r, warning = FALSE, message = FALSE}
+Precipitacion_anual_PA <- extract(Precipitacion_anual, puntos_PA_aragon, fun = mean, df = T)
+Precipitacion_anual_PA <- cbind(Precipitacion_anual_PA, puntos_PA_aragon@data)
+```
+Limpiamos los dos marcos de datos para trabajar más comodamente.
+```{r, warning = FALSE, message = FALSE}
+Temperatura_minima_anual_PA <- Temperatura_minima_anual_PA[,c(12,11, 2,3)]
+Precipitacion_anual_PA <- Precipitacion_anual_PA[,c(12,11, 2,3)]
+```
 
+**Graficos**
+En esta sección vamos a ver como realizar unos gráficos sencillos para visualizar los resultados.  
+Utilizaremos el paquete `ggplot`. Con este paquete se pueden hacer mapas también.
+Como primer paso, y debido al tipo de gráfico que se realizará, utilizamos la función `melt` del paquete `reshape2`. Esta función organiza los valores de datos en un formato de marco de datos largo.
 
+```{r}
+Temperatura_minima_anual_PA <- reshape2::melt(Temperatura_minima_anual_PA)
+Precipitacion_anual_PA <- reshape2::melt(Precipitacion_anual_PA)
+```
+Visualizar
+Un ggplot se construye a partir de algunos elementos básicos:  
+
+Datos: los datos para graficar.  
+Geometrías `geom_`: las formas geométricas que se quieren representar.  
+Estética `aes()`: estética de los objetos geométricos y estadísticos, como posición, color, tamaño, forma y transparencia.  
+Escalas `scale_`: relación entre los datos y las dimensiones estéticas, como el ancho o los valores para los colores.  
+Temas visuales `theme()`: los valores visuales generales de un gráfico, como el fondo, las cuadrículas, los ejes, el tipo de letra predeterminado, los tamaños y los colores.  
+El gráfico mas sencillo para ver si hay diferencias entre periodos sería un diagrama de cajas.  
+```{r}
+ggplot(Temperatura_minima_anual_PA, 
+       aes(x = variable, 
+           y = value)) + 
+  geom_boxplot()
+```
+Este mismo gráfico puede modificarse de muchas maneras.  
+Un ejemplo.
+```{r}
+ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(fill ="red", alpha = .2,)+
+  geom_point(aes(col= NOMBRE), position = position_jitter(width = .2),
+             size = 2,
+             shape = 20)+
+  scale_x_discrete(labels= c("1980", "2018"))+
+  scale_colour_brewer(palette = "Dark2")+
+  labs(y = "Temperatura minima anual (ºC)", x = "Año")+
+  theme_grey()
+```
+Otro ejempo.  
+```{r}
+ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = NOMBRE)) +
+  scale_x_discrete(labels= c("1980", "2018")) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(y = "Temperatura minima anual (ºC)", x = "Año") +
+  theme_minimal()
+```
+Tambien es posible generar gráficos combinados, donde se combinen varios gráficos independientes.
+```{r}
+Grafico_temperatura <- ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = NOMBRE)) +
+  scale_x_discrete(labels= c("1980", "2018")) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(y = "Temperatura minima anual (ºC)", x = "Año") +
+  ggtitle("Temperatura mínima") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+Grafico_precipitacion <- ggplot(Precipitacion_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = NOMBRE)) +
+  scale_x_discrete(labels= c("1980", "2018")) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(y = "Precipitación anual (mm)", x = "Año") +
+  ggtitle("Precipitación") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+ggpubr::ggarrange(Grafico_temperatura, Grafico_precipitacion, common.legend = TRUE, legend = "bottom")
+```
+# Ejercicio práctica 1  
+Estos son los pasos sugeridos:  
+- Cargar datos temperatura y precipitación.   
+- Modificar datos para poder realizar un diagrama de cajas.
+- Graficar.  
+El gráfico final a obtener:
+
+```{r, echo=FALSE}
+Grafico_temperatura2 <- ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = FIGURA)) +
+  scale_x_discrete(labels= c("1980", "2018")) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(y = "Temperatura minima anual (ºC)", x = "Año") +
+  ggtitle("Temperatura mínima") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+Grafico_precipitacion2 <- ggplot(Precipitacion_anual_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = FIGURA)) +
+  scale_x_discrete(labels= c("1980", "2018")) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(y = "Precipitación anual (mm)", x = "Año") +
+  ggtitle("Precipitación") +
+  theme(
+    legend.title = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+ggpubr::ggarrange(Grafico_temperatura2, Grafico_precipitacion2, common.legend = TRUE, legend = "bottom")
+```
