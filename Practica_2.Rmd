@@ -2,7 +2,7 @@
 output: html_document
 ---
 # Práctica 2. Extracción, y posterior visualización de valores de temperatura en localidades concretas.
-En esta práctica se utilizarán los archivos de temeratura mínima y precipitación de Aragón correspondientes a los años 1980 y 2018. Posteriormente se generarán nuevas variables, se extraerán los valores para unas localidades concretas y se visualizarán los reusltados.
+En esta práctica se utilizarán los archivos de temeratura mínima y precipitación de Aragón correspondientes a los años 1980 y 2018. Posteriormente se generarán nuevas variables, se extraerán los valores para unas localidades concretas y se visualizarán los resultados.
 
 Cargar las librerías.   
 ```{r, warning = FALSE, message = FALSE}
@@ -112,17 +112,18 @@ names(Precipitacion_anual) <- c("PR_1980", "PR_2018")
 ```{r, warning = FALSE, message = FALSE}
 plot(Precipitacion_anual)
 ```
+  
 **Extracccion de datos raster utilizando un archivo vectorial**  
-Para ello, primero extraemos la temperatura y despues añadimos la información existente en la tabla de atributos.  
-Temperatura.  
+Para ello, primero extraemos la temperatura, después añadimos la información existente en la tabla de atributos y las coordenadas de los puntos.  
+Temperatura:  
 ```{r, warning = FALSE, message = FALSE}
 Temperatura_minima_anual_PA <- extract(Temperatura_minima_anual, puntos_PA_aragon, fun = mean, df = T)
-Temperatura_minima_anual_PA <- cbind(Temperatura_minima_anual_PA, puntos_PA_aragon@data)
+Temperatura_minima_anual_PA <-  cbind(Temperatura_minima_anual_PA, puntos_PA_aragon@data, coordinates(puntos_PA_aragon))
 ```
-Precipitación.  
+Precipitación:  
 ```{r, warning = FALSE, message = FALSE}
 Precipitacion_anual_PA <- extract(Precipitacion_anual, puntos_PA_aragon, fun = mean, df = T)
-Precipitacion_anual_PA <- cbind(Precipitacion_anual_PA, puntos_PA_aragon@data)
+Precipitacion_anual_PA <- cbind(Precipitacion_anual_PA, puntos_PA_aragon@data, coordinates(puntos_PA_aragon))
 ```
 Limpiamos los dos marcos de datos para trabajar más comodamente.
 ```{r, warning = FALSE, message = FALSE}
@@ -130,23 +131,24 @@ Temperatura_minima_anual_PA <- Temperatura_minima_anual_PA[,c(12,11, 2,3)]
 Precipitacion_anual_PA <- Precipitacion_anual_PA[,c(12,11, 2,3)]
 ```
 
-**Graficos**
+**Graficos**  
 En esta sección vamos a ver como realizar unos gráficos sencillos para visualizar los resultados.  
 Utilizaremos el paquete `ggplot`. Con este paquete se pueden hacer mapas también.
 Como primer paso, y debido al tipo de gráfico que se realizará, utilizamos la función `melt` del paquete `reshape2`. Esta función organiza los valores de datos en un formato de marco de datos largo.
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 Temperatura_minima_anual_PA <- reshape2::melt(Temperatura_minima_anual_PA)
 Precipitacion_anual_PA <- reshape2::melt(Precipitacion_anual_PA)
 ```
-Visualizar
-Un ggplot se construye a partir de algunos elementos básicos:  
+Visualizar  
+Un gráfico con `ggplot` se construye a partir de algunos elementos básicos:  
 
 Datos: los datos para graficar.  
 Geometrías `geom_`: las formas geométricas que se quieren representar.  
 Estética `aes()`: estética de los objetos geométricos y estadísticos, como posición, color, tamaño, forma y transparencia.  
 Escalas `scale_`: relación entre los datos y las dimensiones estéticas, como el ancho o los valores para los colores.  
 Temas visuales `theme()`: los valores visuales generales de un gráfico, como el fondo, las cuadrículas, los ejes, el tipo de letra predeterminado, los tamaños y los colores.  
+  
 El gráfico mas sencillo para ver si hay diferencias entre periodos sería un diagrama de cajas.  
 ```{r}
 ggplot(Temperatura_minima_anual_PA, 
@@ -154,8 +156,9 @@ ggplot(Temperatura_minima_anual_PA,
            y = value)) + 
   geom_boxplot()
 ```
+  
 Este mismo gráfico puede modificarse de muchas maneras.  
-Un ejemplo.
+Un ejemplo:
 ```{r}
 ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
   geom_boxplot(fill ="red", alpha = .2,)+
@@ -167,7 +170,8 @@ ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) +
   labs(y = "Temperatura minima anual (ºC)", x = "Año")+
   theme_grey()
 ```
-Otro ejempo.  
+  
+Otro ejempo:  
 ```{r}
 ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
   geom_boxplot(aes(fill = NOMBRE)) +
@@ -176,6 +180,7 @@ ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) +
   labs(y = "Temperatura minima anual (ºC)", x = "Año") +
   theme_minimal()
 ```
+  
 Tambien es posible generar gráficos combinados, donde se combinen varios gráficos independientes.
 ```{r}
 Grafico_temperatura <- ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
@@ -207,40 +212,54 @@ Grafico_precipitacion <- ggplot(Precipitacion_anual_PA, aes(x = variable, y = va
   )
 ggpubr::ggarrange(Grafico_temperatura, Grafico_precipitacion, common.legend = TRUE, legend = "bottom")
 ```
+  
 # Ejercicio práctica 1  
 Estos son los pasos sugeridos:  
-- Cargar datos temperatura y precipitación.   
-- Modificar datos para poder realizar un diagrama de cajas.
+- Cargar la capa `tmax_aragon_1_2012.tif` generada en la práctica 1.   
+- Modificar datos para poder realizar un diagrama de cajas.  
 - Graficar.  
 El gráfico final a obtener:
+  
+```{r, echo=FALSE, warning = FALSE, message = FALSE}
+Temperatura_maxima <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RESULTADOS/PRACTICA_1/tmax_aragon_1_2012.tif")
+Temperatura_maxima_PA <- extract(Temperatura_maxima, puntos_PA_aragon, fun = mean, df = T)
+Temperatura_maxima_PA <- cbind(Temperatura_maxima_PA, puntos_PA_aragon@data)
+Temperatura_maxima_PA <- Temperatura_maxima_PA[,c(11,10, 2)]
+colnames(Temperatura_maxima_PA) <- c("Nombre", "Figura", "Tmax_1_2012")
 
-```{r, echo=FALSE}
-Grafico_temperatura2 <- ggplot(Temperatura_minima_anual_PA, aes(x = variable, y = value)) + 
-  geom_boxplot(aes(fill = FIGURA)) +
-  scale_x_discrete(labels= c("1980", "2018")) +
-  scale_colour_brewer(palette = "Dark2") +
-  labs(y = "Temperatura minima anual (ºC)", x = "Año") +
-  ggtitle("Temperatura mínima") +
+Temperatura_maxima_PA <- reshape2::melt(Temperatura_maxima_PA)
+
+ggplot(Temperatura_maxima_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = Figura)) +
+  labs(y = "Temperatura máxima (ºC)") +
+  ggtitle("Temperatura máxima") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
-    axis.title.y = element_blank(),
     axis.ticks.x = element_blank()
   )
-Grafico_precipitacion2 <- ggplot(Precipitacion_anual_PA, aes(x = variable, y = value)) + 
-  geom_boxplot(aes(fill = FIGURA)) +
-  scale_x_discrete(labels= c("1980", "2018")) +
-  scale_colour_brewer(palette = "Dark2") +
-  labs(y = "Precipitación anual (mm)", x = "Año") +
-  ggtitle("Precipitación") +
+```
+  
+Solución:  
+```{r, eval= FALSE}
+Temperatura_maxima <- raster("E:/SEMINARIO_BIOGEOGRAFIA/RESULTADOS/PRACTICA_1/tmax_aragon_1_2012.tif")
+Temperatura_maxima_PA <- extract(Temperatura_maxima, puntos_PA_aragon, fun = mean, df = T)
+Temperatura_maxima_PA <- cbind(Temperatura_maxima_PA, puntos_PA_aragon@data)
+Temperatura_maxima_PA <- Temperatura_maxima_PA[,c(11,10, 2)]
+colnames(Temperatura_maxima_PA) <- c("Nombre", "Figura", "Tmax_1_2012")
+
+Temperatura_maxima_PA <- reshape2::melt(Temperatura_maxima_PA)
+
+ggplot(Temperatura_maxima_PA, aes(x = variable, y = value)) + 
+  geom_boxplot(aes(fill = Figura)) +
+  labs(y = "Temperatura máxima (ºC)") +
+  ggtitle("Temperatura máxima (Enero 2012)") +
   theme(
     legend.title = element_blank(),
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    axis.title.y = element_blank(),
-    axis.ticks.y = element_blank()
+    axis.ticks.x = element_blank()
   )
-ggpubr::ggarrange(Grafico_temperatura2, Grafico_precipitacion2, common.legend = TRUE, legend = "bottom")
 ```
+
