@@ -4,11 +4,11 @@ output: html_document
 ---
 # RStudio
 RStudio es un ambiente de desarrollo integrado para programar en R
-<img src="T:/GITHUB_REP/seminario_biogeografia_MNCN/Rstudio.jpg" width="800px">  
+<img src="C:/GITHUB_REP/seminario_biogeografia_MNCN/Rstudio.jpg" width="800px">  
 ***Zona 1: Editor***  
 Es la zona de trabajo en la que se escribe el código que se querrá ejecutar.  
 Para ejecutar el código `Ctrl + Enter`.  
-Para indicar que es un comentario y noes código `#`.  
+Para indicar que es un comentario y no es código `#`.  
 ***Zona 2: Entorno de trabajo***  
 Se muestran todos los objetos creados. Para crear un objeto `<-`.  
 ***Zona 3: Consola y Terminal***  
@@ -21,8 +21,9 @@ Varias pestañas:
 – En Help aparecerá la ayuda de R base.  
 – En Viewer se abrirán imágenes, que no gráficos.  
 
+Más información: https://posit.co/wp-content/uploads/2022/10/rstudio-ide-1.pdf  
 
-# Directorio de trabajo en R
+# Directorio de trabajo en R  
 El directorio de trabajo en R es la carpeta donde se está trabajando. Por lo tanto, es el lugar (el entorno) donde debe almacenar los archivos de su proyecto para poder cargarlos o donde se guardarán sus objetos R.  
 Es importante señalar que las rutas en R se hacen indican con `/`.
 
@@ -31,7 +32,7 @@ Es importante señalar que las rutas en R se hacen indican con `/`.
 getwd()
 ```
 **Modificar la ruta del directorio de trabajo**  
-Se puede hacer de manera manual `Ctrl + Shift + H`.
+Se puede hacer de manera manual `Ctrl + Shift + H` o mediante código.  
 ```{r, eval = FALSE, warning = FALSE, message = FALSE}
 setwd("C:/NUEVO_DIRECTORIO")
 ```
@@ -42,11 +43,11 @@ Más Información: https://r-coder.com/working-directory-r/
 Un paquete R es una biblioteca de funciones
 
 **Instalar paquetes desde CRAN (Comprehensive R Archive Network), el repositorio oficial de paquetes R**  
-Se puede hacer de manera manual `Tools`- `Install Packages...`.
+Se puede hacer de manera manual `Tools`- `Install Packages`.
 ```{r, eval = FALSE, warning = FALSE, message = FALSE}
 install.packages("ggplot")
 ```
-Después de la instalación, hay que cargar el paquete con la función library.
+Después de la instalación, hay que cargar el paquete con la función `library`.
 ```{r, eval = FALSE, warning = FALSE, message = FALSE}
 library("ggplot")
 ```
@@ -67,7 +68,7 @@ help.start()
 ??ggpl
 ```
 # Viñeta de ejemplos
-Las viñetas son largas guías de paquetes que describen su uso con amplias explicaciones y ejemplos**
+Las viñetas son largas guías de paquetes que describen su uso con amplias explicaciones y ejemplos
 ```{r, eval = FALSE, warning = FALSE, message = FALSE}
 vignette("extending-ggplot2")
 ```
@@ -119,7 +120,7 @@ marco_datos[2,1] <- "Maria"
 marco_datos[2,2] <- 21
 marco_datos
 ```
-**Añadir datos de un vector al marco de datos vacío**  
+**Añadir y modificar datos un marco de datos**  
 La funcion `cbin` añade una nueva columna.  
  
 ```{r,  warning = FALSE, message = FALSE}
