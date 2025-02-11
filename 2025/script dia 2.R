@@ -48,10 +48,50 @@ ggplot() +
   theme(legend.title = element_blank())  # Ocultar título de la leyenda
 
 
+endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+library(sf)
+enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/Enp2023.shp")
 
+enp <- enp %>% 
+  filter(FIGURA_LP=="Parque Natural")
 
+library(tmap)
+endemism_sf <- endemism %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
 
+library(ggplot2)
+library(sf)
+library(dplyr)
 
+# Cargar datos de especies seleccionadas
+endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+
+# Cargar shapefile de ENP (Espacios Naturales Protegidos)
+enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/Enp2023.shp")
+
+# Asegurar que las coordenadas sean numéricas y preparar los datos
+endemism <- endemism %>%
+  mutate(LATITUDE = as.numeric(LATITUDE),
+         LONGITUDE = as.numeric(LONGITUDE)) %>%
+  select(ESPECIE.2017, LATITUDE, LONGITUDE) %>%  # Quedarse solo con las columnas necesarias
+  distinct(LATITUDE, LONGITUDE, .keep_all = TRUE)  # Eliminar duplicados en latitud y longitud
+
+# Convertir a objeto sf para las especies
+endemism_sf <- endemism %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+
+# Crear el mapa con ggplot
+ggplot() +
+  # Añadir los polígonos de los ENP
+  geom_sf(data = enp, fill = "transparent", color = "darkgreen", size = 0.5) +
+  # Añadir los puntos de las especies
+  geom_sf(data = endemism_sf, aes(color = ESPECIE.2017), size = 1, shape = 16, alpha = 0.7) +
+  # Ajustar límites de la vista
+  coord_sf(xlim = c(-10, 5), ylim = c(35, 45), expand = FALSE) + 
+  # Añadir título y tema
+  ggtitle("Distribución de especies en la Península Ibérica con ENP") +
+  theme_minimal() +
+  theme(legend.title = element_blank())  # Opcional: eliminar el título de la leyenda
 
 library(readxl)
 library(dplyr)
