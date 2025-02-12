@@ -1,7 +1,7 @@
 library(dplyr)
 library(sf)
 library(ggplot2)
-library(tmap)
+
 
 # Cargar datos
 endemism <- read.csv("C:/Users/mario/Dropbox/CURSO_FORMACION_CSIC/Curso_formacion_csic/endemism.csv")
@@ -30,6 +30,12 @@ muestra <- datos_filtrados %>%
 # Exportar los datos seleccionados a un archivo CSV
 write.csv(muestra, "endemism_seleccionados.csv", row.names = FALSE)
 
+
+
+
+
+
+
 # Convertir a objeto sf
 datos_sf <- muestra %>%
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326) %>%
@@ -49,7 +55,7 @@ ggplot() +
   theme(legend.title = element_blank())  # Ocultar título de la leyenda
 
 
-
+##########################
 
 library(sf)
 library(tmap)
@@ -67,142 +73,97 @@ enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/E
 # Resumen estadístico de los atributos
 class(enp)
 summary(enp)
-summary(endemism_sf)
+crs(endemism_sf)
 
 
 enp <- enp %>%
-  select(SITENAME, FIGURA_LP, AREA_HA, CCAA_N_ENP) %>% 
-  filter(!(CCAA_N_ENP %in% c("Illes Balears", "Canarias")) & FIGURA_LP == "Parque Natural")
+  dplyr::select(SITENAME, FIGURA_LP, AREA_HA, CCAA_N_ENP) %>% 
+  dplyr::filter(!(CCAA_N_ENP %in% c("Illes Balears", "Canarias")) & FIGURA_LP == "Parque Natural")
 
-enp %>% mutate(AREA_HA2 = st_area(enp) / 10000)
 
 # Transformar el shapefile a WGS84 (si no está en este sistema)
-enp <- st_transform(enp, crs = 4326)
-
-# Cargar librerías
-library(leaflet)
-library(sf)
-
-# Asegúrate de que el shapefile esté en WGS84
-enp <- st_transform(enp, crs = 4326)
-
-# Crear el mapa interactivo
-leaflet(data = enp) %>%
-  addPolygons(fillColor = "blue", color = "black", weight = 1, opacity = 0.7, fillOpacity = 0.5) 
-
-leaflet(data = enp) %>%
-  addProviderTiles("CartoDB.Positron") %>%
-  addPolygons(fillColor = "blue")
-
-# Cargar las librerías necesarias
-library(tmap)
-library(sf)
-
-# Si tu objeto 'enp' es un archivo shapefile, asegúrate de que está cargado correctamente
-# enp <- st_read("ruta/a/tu/archivo.shp")  # Descomenta si no has cargado el shapefile aún
-
-# Crear el mapa básico con tmap
-tm_shape(enp) +
-  tm_polygons(fillColor = "blue", color = "black", border.alpha = 0.5)  # Polígonos con borde negro y relleno azul
-
-leaflet() %>%
-  addTiles() %>%
-  setView(lng = -3.7, lat = 40.4, zoom = 5)
-
-# Cargar datos de especies seleccionadas
-endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
-
-# Cargar shapefile de ENP (Espacios Naturales Protegidos)
-enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/Enp2023.shp")
-
-# Asegurar que las coordenadas sean numéricas y preparar los datos
-endemism <- endemism %>%
-  mutate(LATITUDE = as.numeric(LATITUDE),
-         LONGITUDE = as.numeric(LONGITUDE)) %>%
-  select(ESPECIE.2017, LATITUDE, LONGITUDE) %>%  # Quedarse solo con las columnas necesarias
-  distinct(LATITUDE, LONGITUDE, .keep_all = TRUE)  # Eliminar duplicados en latitud y longitud
-
-# Convertir a objeto sf para las especies
-endemism_sf <- endemism %>%
-  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
-
-# Crear el mapa con ggplot
-ggplot() +
-  # Añadir los polígonos de los ENP
-  geom_sf(data = enp, fill = "transparent", color = "darkgreen", size = 0.5) +
-  # Añadir los puntos de las especies
-  geom_sf(data = endemism_sf, aes(color = ESPECIE.2017), size = 1, shape = 16, alpha = 0.7) +
-  # Ajustar límites de la vista
-  coord_sf(xlim = c(-10, 5), ylim = c(35, 45), expand = FALSE) + 
-  # Añadir título y tema
-  ggtitle("Distribución de especies en la Península Ibérica con ENP") +
-  theme_minimal() +
-  theme(legend.title = element_blank())  # Opcional: eliminar el título de la leyenda
-
-library(readxl)
-library(dplyr)
-datos_intro_r <- read_xlsx("C:/intro_r/datos_intro_r.xlsx")
-datos_sf <- datos_intro_r %>%
-  st_as_sf(coords = c("Long", "Lat"), crs = 4326)
-
-plot(datos_sf)
+enp <- sf::st_transform(enp, crs = 4326)
+endemism_sf <- sf::st_transform(endemism_sf, crs = 4326)
 
 library(ggplot2)
-
-ggplot(datos_sf, aes(x = Long, y = Lat)) +
-  geom_point(color = "red", size = 2) +
-  borders("world", colour = "gray50", fill = "lightgray") +  # Agregar mapa base
-  theme_minimal()
-
-
 library(sf)
-length(ls("package:sf"))
 
-# Carga y Exploración de Datos Espaciales -----
+# Mapa básico de ENP
+ggplot(data = enp) +
+  geom_sf()
 
-# Cargar un archivo shapefile
-shapefile <- st_read("ruta/al/archivo.shp")
+# Mapa de endemismos con puntos
+ggplot(data = endemism_sf) +
+  geom_sf(aes(color = endemism))  # Puedes añadir color según un atributo
 
-# Tipo de objeto
-class(shapefile)
+# Mapa combinado con ENP y endemismos
+ggplot() +
+  geom_sf(data = enp) +
+  geom_sf(data = endemism_sf, aes(color = ESPECIE.2017))
 
-# Dimensiones (número de filas y columnas)
-dim(shapefile)
+library(rnaturalearth)
+spain <- ne_states(country = "spain")
+world <- ne_countries(scale = 10)
 
-# Tipo de geometría (puntos, líneas o polígonos)
-st_geometry(shapefile)
+ggplot() +
+  geom_sf(data = spain)+
+  geom_sf(data = enp, color = "green4") +
+  geom_sf(data = endemism_sf, color = "red")
 
-# Sistema de referencia de coordenadas (CRS)
-st_crs(shapefile)
+spain_peninsular <- spain %>%
+    dplyr::filter(!region %in% c("Islas Baleares", "Canary Is.", "Ceuta", "Melilla")) 
 
-# Resumen general de los datos
-summary(shapefile)
+ggplot() +
+  geom_sf(data = spain_peninsular)+
+  geom_sf(data = enp, color = "green4") +
+  geom_sf(data = endemism_sf, color = "red")
+
+spain_peninsular_dissolved <- st_union(spain_peninsular)
+ggplot() +
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp, color = "green4") +
+  geom_sf(data = endemism_sf, color = "red")
+
+ggplot() +
+  geom_sf(data = world , fill = "gray30")+
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp, color = "green4") +
+  geom_sf(data = endemism_sf, color = "red")+
+  coord_sf(xlim = st_bbox(spain_peninsular_dissolved)[c("xmin", "xmax")],
+           ylim = st_bbox(spain_peninsular_dissolved)[c("ymin", "ymax")],
+           expand = FALSE) 
 
 
-library(dplyr)
+puntos_en_spain <- st_intersection(endemism_sf, spain_peninsular)
 
-# Ver las primeras filas del dataset
-head(shapefile)
+ggplot() +
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp)+
+  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = puntos_en_spain, color = "green4")
 
-# Seleccionar columnas específicas
-shapefile %>% select(Nombre, Tipo)
+endemism_sf <- endemism_sf %>%
+  rename(spp = ESPECIE.2017)
 
-# Filtrar elementos específicos
-shapefile %>% filter(Tipo == "Bosque")
 
-# Crear una nueva variable derivada
-shapefile <- shapefile %>% mutate(Area_km2 = st_area(geometry) / 1e6)
+# Intenta hacer que las geometrías sean válidas
+endemism_sf <- st_make_valid(endemism_sf)
+enp <- st_make_valid(enp)
+puntos_en_enp <- st_intersection(endemism_sf, enp)
+ggplot() +
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp)+
+  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = puntos_en_spain, color = "green4")+
+  geom_sf(data = puntos_en_enp, color = "blue")+
+  geom_sf(data = enp_puntos, color = "gray2")
 
-# Proyecciones y Sistemas de Coordenadas -----
-# Ver el CRS del shapefile cargado
-st_crs(shapefile)
+enp_puntos <- st_intersection(enp,endemism_sf)
 
-# Asignar un CRS conocido (Ejemplo: WGS 84 - EPSG:4326)
-st_crs(shapefile) <- 4326
+enp_puntos <- st_intersects(enp, endemism_sf)
+enp_puntos <- lengths(enp_puntos) > 0
+enp_puntos <- enp[enp_puntos, ]
 
-# Transformar a un CRS proyectado (Ejemplo: UTM zona 33N - EPSG:32633)
-shapefile_utm <- st_transform(shapefile, crs = 32633)
-
-# Verificar la nueva proyección
-st_crs(shapefile_utm)
-
+enp_puntos <- enp %>%
+  mutate(intersecta = lengths(st_intersects(enp, endemism_sf)) > 0) %>%  # Verifica si hay intersección
+  filter(intersecta == TRUE)  # Filtra los polígonos que tienen intersección con puntos
