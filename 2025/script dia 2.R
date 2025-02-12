@@ -1,6 +1,7 @@
 library(dplyr)
 library(sf)
 library(ggplot2)
+library(tmap)
 
 # Cargar datos
 endemism <- read.csv("C:/Users/mario/Dropbox/CURSO_FORMACION_CSIC/Curso_formacion_csic/endemism.csv")
@@ -48,20 +49,65 @@ ggplot() +
   theme(legend.title = element_blank())  # Ocultar título de la leyenda
 
 
-endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+
+
 library(sf)
+library(tmap)
+library(dplyr)
+
+endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+
+# Convertir a objeto sf
+endemism_sf <- st_as_sf(endemism, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+
+# Leer el archivo shapefile de enp
 enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/Enp2023.shp")
 
-enp <- enp %>% 
-  filter(FIGURA_LP=="Parque Natural")
 
-library(tmap)
-endemism_sf <- endemism %>%
-  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+# Resumen estadístico de los atributos
+class(enp)
+summary(enp)
+summary(endemism_sf)
 
-library(ggplot2)
+
+enp <- enp %>%
+  select(SITENAME, FIGURA_LP, AREA_HA, CCAA_N_ENP) %>% 
+  filter(!(CCAA_N_ENP %in% c("Illes Balears", "Canarias")) & FIGURA_LP == "Parque Natural")
+
+enp %>% mutate(AREA_HA2 = st_area(enp) / 10000)
+
+# Transformar el shapefile a WGS84 (si no está en este sistema)
+enp <- st_transform(enp, crs = 4326)
+
+# Cargar librerías
+library(leaflet)
 library(sf)
-library(dplyr)
+
+# Asegúrate de que el shapefile esté en WGS84
+enp <- st_transform(enp, crs = 4326)
+
+# Crear el mapa interactivo
+leaflet(data = enp) %>%
+  addPolygons(fillColor = "blue", color = "black", weight = 1, opacity = 0.7, fillOpacity = 0.5) 
+
+leaflet(data = enp) %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addPolygons(fillColor = "blue")
+
+# Cargar las librerías necesarias
+library(tmap)
+library(sf)
+
+# Si tu objeto 'enp' es un archivo shapefile, asegúrate de que está cargado correctamente
+# enp <- st_read("ruta/a/tu/archivo.shp")  # Descomenta si no has cargado el shapefile aún
+
+# Crear el mapa básico con tmap
+tm_shape(enp) +
+  tm_polygons(fillColor = "blue", color = "black", border.alpha = 0.5)  # Polígonos con borde negro y relleno azul
+
+leaflet() %>%
+  addTiles() %>%
+  setView(lng = -3.7, lat = 40.4, zoom = 5)
 
 # Cargar datos de especies seleccionadas
 endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
