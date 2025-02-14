@@ -95,9 +95,11 @@ ggplot() +
 
 #Añadir mas datos utilizando funciones de paquetes
 library(rnaturalearth)
+
 spain_map <- ne_states(country = "spain")
 st_crs(spain_map) == st_crs(enp)
 spain <- sf::st_transform(spain_map, crs = 25830)
+st_crs(spain) == st_crs(enp)
 
 ggplot() +
   geom_sf(data = spain_map)+
@@ -137,13 +139,12 @@ ggplot() +
 
 
 
-
 # Ejercio 2
-world <- ne_countries(scale = 10)
+world_map <- ne_countries(scale = 10)
 world <- sf::st_transform(world, crs = 25830)
 
 ggplot() +
-  geom_sf(data = world , fill = "gray30")+
+  geom_sf(data = world_map , fill = "gray30")+
   geom_sf(data = spain_peninsular_dissolved, color = "black", size = 4)+
   geom_sf(data = enp, color = "darkgreen", fill = "green4", alpha = .2) +
   geom_sf(data = endemism_sf, color = "red")+
@@ -151,25 +152,7 @@ ggplot() +
            ylim = c(35,44),
            expand = FALSE) +
   theme_minimal()
-
-
-endemims_sf_spain <- st_intersection(endemism_sf, spain_peninsular)
-
-ggplot() +
-  geom_sf(data = spain_peninsular_dissolved)+
-  geom_sf(data = enp)+
-  geom_sf(data = endemism_sf, color = "red")+
-  geom_sf(data = puntos_en_spain, color = "green4")
-
-endemism_sf <- endemism_sf %>%
-  rename(spp = ESPECIE.2017)
-
-
-malla <- st_make_grid(
-  st_as_sfc(st_bbox(endemism_sf), crs = 25830)
-)
-
-
+##################
 
 malla <- st_make_grid(endemism_sf_m, cellsize = 50000, square = FALSE)
 class(malla)
@@ -200,6 +183,15 @@ malla_puntos <- malla %>%
   filter(num_intersec > 0)
 
 
+#################################
+
+endemims_sf_spain <- st_intersection(endemism_sf, spain_peninsular)
+
+ggplot() +
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp)+
+  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = puntos_en_spain, color = "green4")
 # Intenta hacer que las geometrías sean válidas
 endemism_sf <- st_make_valid(endemism_sf)
 enp <- st_make_valid(enp)
