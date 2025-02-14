@@ -32,39 +32,16 @@ write.csv(muestra, "endemism_seleccionados.csv", row.names = FALSE)
 
 
 
-
-
-
-
-# Convertir a objeto sf
-datos_sf <- muestra %>%
-  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = 4326) %>%
-  mutate(Long = st_coordinates(.)[,1], Lat = st_coordinates(.)[,2])
-
-# Filtrar solo puntos dentro de la Península Ibérica (aprox.)
-datos_sf <- datos_sf %>%
-  filter(Lat >= 35 & Lat <= 45, Long >= -10 & Long <= 5)
-
-# Mapa con ggplot
-ggplot() +
-  borders("world", regions = c("Spain", "Portugal"), colour = "gray50", fill = "lightgray") +  # Fondo mapa
-  geom_point(data = datos_sf, aes(x = Long, y = Lat, color = ESPECIE.2017), size = 2) +  # Puntos por especie
-  coord_sf(xlim = c(-10, 5), ylim = c(35, 45), expand = FALSE) +  # Zoom en la península
-  theme_minimal() +
-  ggtitle("Distribución de 5 especies seleccionadas en la Península Ibérica") +
-  theme(legend.title = element_blank())  # Ocultar título de la leyenda
-
-
 ##########################
 
 library(sf)
 library(dplyr)
 library(ggplot2)
 
-endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+endemism <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
 
 # Convertir a objeto sf
-endemism_sf <- st_as_sf(endemism, coords = c("LONGITUDE", "LATITUDE"), crs = 4326)
+endemism_sf <- st_as_sf(endemism, coords = c("Longitud", "Latitud"), crs = 4326)
 
 # Leer el archivo shapefile de enp
 enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/Enp2023.shp")
@@ -74,7 +51,7 @@ enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/E
 class(enp)
 summary(enp)
 st_crs(endemism_sf)
-crs(endemism_sf)
+
 
 
 enp <- enp %>%
@@ -83,8 +60,8 @@ enp <- enp %>%
 
 
 # Transformar el shapefile a WGS84 (si no está en este sistema)
-enp <- sf::st_transform(enp, crs = 4326)
-endemism_sf <- sf::st_transform(endemism_sf, crs = 4326)
+enp <- sf::st_transform(enp, crs = 25830)
+endemism_sf <- sf::st_transform(endemism_sf, crs = 25830)
 
 
 # Mapa básico de ENP
@@ -99,7 +76,7 @@ ggplot() +
 # Mapa combinado con ENP y endemismos
 ggplot() +
   geom_sf(data = enp) +
-  geom_sf(data = endemism_sf, aes(color = ESPECIE.2017))
+  geom_sf(data = endemism_sf, aes(color = Especie))
 
 library(rnaturalearth)
 spain <- ne_states(country = "spain")
@@ -126,12 +103,13 @@ ggplot() +
 
 ggplot() +
   geom_sf(data = world , fill = "gray30")+
-  geom_sf(data = spain_peninsular_dissolved)+
-  geom_sf(data = enp, color = "green4") +
+  geom_sf(data = spain_peninsular_dissolved, color = "black", size = 4)+
+  geom_sf(data = enp, color = "darkgreen", fill = "green4", alpha = .2) +
   geom_sf(data = endemism_sf, color = "red")+
-  coord_sf(xlim = st_bbox(spain_peninsular_dissolved)[c("xmin", "xmax")],
-           ylim = st_bbox(spain_peninsular_dissolved)[c("ymin", "ymax")],
-           expand = FALSE) 
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44),
+           expand = FALSE) +
+  theme_minimal()
 
 
 puntos_en_spain <- st_intersection(endemism_sf, spain_peninsular)
@@ -146,20 +124,45 @@ endemism_sf <- endemism_sf %>%
   rename(spp = ESPECIE.2017)
 
 
-# Intenta hacer que las geometrías sean válidas
-endemism_sf <- st_make_valid(endemism_sf)
-enp <- st_make_valid(enp)
-puntos_en_enp <- st_intersection(endemism_sf, enp)
+malla <- st_make_grid(
+  st_as_sfc(st_bbox(endemism_sf), crs = 25830)
+)
+
+
+
+malla <- st_make_grid(endemism_sf_m, cellsize = 50000, square = FALSE)
+class(malla)
+malla <- sf::st_as_sf(malla)
 
 ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
   geom_sf(data = enp)+
   geom_sf(data = endemism_sf, color = "red")+
   geom_sf(data = puntos_en_spain, color = "green4")+
-  geom_sf(data = puntos_en_enp, color = "blue")+
-  geom_sf(data = enp_puntos, color = "gray2")
+  geom_sf(data = malla, fill = "transparent")
 
-enp_puntos <- st_intersection(enp,endemism_sf)
+
+malla_puntos <- st_intersects(malla, endemism_sf)
+malla_puntos <- lengths(malla_puntos) > 0
+malla_puntos <- malla[malla_puntos, ]
+
+ggplot() +
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = enp)+
+  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = puntos_en_spain, color = "green4")+
+  geom_sf(data = malla, fill = "transparent")+
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
+
+malla_puntos <- malla %>%
+  mutate(intersecta = lengths(st_intersects(malla, endemism_sf)) > 0) %>%  # Verifica si hay intersección
+  filter(intersecta == TRUE)  # Filtra los polígonos que tienen intersección con puntos
+
+# Intenta hacer que las geometrías sean válidas
+endemism_sf <- st_make_valid(endemism_sf)
+enp <- st_make_valid(enp)
+puntos_en_enp <- st_intersection(endemism_sf, enp)
+
 
 enp_puntos <- st_intersects(enp, endemism_sf)
 enp_puntos <- lengths(enp_puntos) > 0
