@@ -58,8 +58,8 @@ ggplot() +
 ##########################
 
 library(sf)
-library(tmap)
 library(dplyr)
+library(ggplot2)
 
 endemism <- read.csv("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
 
@@ -73,6 +73,7 @@ enp <- st_read("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/enp/E
 # Resumen estadístico de los atributos
 class(enp)
 summary(enp)
+st_crs(endemism_sf)
 crs(endemism_sf)
 
 
@@ -85,16 +86,15 @@ enp <- enp %>%
 enp <- sf::st_transform(enp, crs = 4326)
 endemism_sf <- sf::st_transform(endemism_sf, crs = 4326)
 
-library(ggplot2)
-library(sf)
 
 # Mapa básico de ENP
-ggplot(data = enp) +
-  geom_sf()
+ggplot() +
+  geom_sf(data = enp)
 
 # Mapa de endemismos con puntos
-ggplot(data = endemism_sf) +
-  geom_sf(aes(color = endemism))  # Puedes añadir color según un atributo
+ggplot() +
+  geom_sf(data = enp)+
+  geom_sf(data = endemism_sf, color = "red") # Puedes añadir color según un atributo
 
 # Mapa combinado con ENP y endemismos
 ggplot() +
@@ -150,6 +150,7 @@ endemism_sf <- endemism_sf %>%
 endemism_sf <- st_make_valid(endemism_sf)
 enp <- st_make_valid(enp)
 puntos_en_enp <- st_intersection(endemism_sf, enp)
+
 ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
   geom_sf(data = enp)+
