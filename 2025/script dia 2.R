@@ -129,8 +129,6 @@ ggplot() +
   geom_sf(data = enp, color = "green4") +
   geom_sf(data = endemism_sf, color = "red")
 
-
-
 world_map <- ne_countries(scale = 10)
 
 
