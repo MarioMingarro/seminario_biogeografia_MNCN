@@ -121,7 +121,7 @@ ggplot() +
   geom_sf(data = endemism_sf, color = "red")
 
 #######
-st_crs(spain_peninsular_dissolved)
+
 spain_peninsular_dissolved <- st_union(spain_peninsular)
 
 ggplot() +
@@ -143,7 +143,7 @@ ggplot() +
            ylim = c(35,44)) +
   theme_light()
 
-##################
+
 
 malla <- st_make_grid(spain_peninsular_dissolved, cellsize = 50000, square = FALSE)
 class(malla)
@@ -166,29 +166,24 @@ ggplot() +
   geom_sf(data = malla, fill = "transparent")+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
 
+# Ejercicio 2 ----
+endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular_dissolved)
 
-# Paso 2: Unir los polígonos con los puntos
-malla_puntos <- st_join(malla, endemism_sf, join = st_intersects)
+malla_puntos <- st_join(malla, endemism_sf_spain, join = st_intersects)
 malla_puntos <- malla_puntos %>%
   filter(Especie > 0)
 
 ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
-  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = endemism_sf_spain, color = "red")+
   geom_sf(data = malla, fill = "transparent")+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
 
 
 malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
 
+pp <- malla_puntos %>% group_by(Especie) %>% summarise(mean(area_km2))
 ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", size = 6)+
-  geom_sf(data = malla_puntos, aes(fill = area_km2), color = "transparent")+
-  geom_sf(data = endemism_sf_spain, color = "red")+
-  viridis::scale_fill_viridis()+
-  coord_sf(xlim = c(-10, 4),
-           ylim = c(35,44)) +
-  theme_light()
-
+  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = malla_puntos, aes(fill = Especie))
 
