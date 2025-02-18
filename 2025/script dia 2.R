@@ -163,7 +163,7 @@ ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
   geom_sf(data = endemism_sf, color = "red")+
   geom_sf(data = malla, fill = "transparent")+
-  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
   geom_sf(data = kk, fill = "green", alpha = .2)
 
 # Paso 1: Calcular el área de cada polígono en la malla
@@ -171,46 +171,63 @@ malla <- malla %>%
   mutate(area_malla = st_area(.))
 
 # Paso 2: Unir los polígonos con los puntos
-malla_puntos <- st_join(malla, endemism_sf, join = st_contains)
-kk <- malla_puntos %>%
+malla_puntos <- st_join(malla, endemism_sf, join = st_intersects)
+malla_puntos <- malla_puntos %>%
   filter(Especie > 0)
 
 ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
   geom_sf(data = endemism_sf, color = "red")+
   geom_sf(data = malla, fill = "transparent")+
-  geom_sf(data = kk, fill = "blue", alpha = .2)
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
 
-kk2 <- st_intersection(kk, spain_peninsular)
+# Ejercicio 2 ----- 
+endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular)
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
   geom_sf(data = spain_peninsular_dissolved, color = "black", size = 6)+
-  geom_sf(data = enp, color = "darkgreen", fill = "green4", alpha = .2) +
-  geom_sf(data = endemism_sf, color = "red", alpha = .4)+
-  geom_sf(data = kk2, fill = "red", color = "transparent", alpha = .2)+
+  geom_sf(data = endemism_sf, color = "yellow")+
+  geom_sf(data = endemism_sf_spain, color = "red")+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
-
-#################################
-
-endemims_sf_spain <- st_intersection(endemism_sf, spain_peninsular)
+  
+malla_puntos_2 <- st_join(malla, endemism_sf_spain, join = st_intersects)
+malla_puntos_2 <- malla_puntos %>%
+  filter(Especie > 0)
 
 ggplot() +
-  geom_sf(data = spain_peninsular_dissolved)+
-  geom_sf(data = enp)+
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", size = 6)+
   geom_sf(data = endemism_sf, color = "red")+
-  geom_sf(data = puntos_en_spain, color = "green4")
-# Intenta hacer que las geometrías sean válidas
-endemism_sf <- st_make_valid(endemism_sf)
-enp <- st_make_valid(enp)
-puntos_en_enp <- st_intersection(endemism_sf, enp)
+  geom_sf(data = malla_puntos_2, fill = "blue", color = "transparent", alpha = .2)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
+  
+#################################
 
+malla_puntos_2_spain <- st_intersection(malla_puntos_2, spain_peninsular)
 
-enp_puntos <- st_intersects(enp, endemism_sf)
-enp_puntos <- lengths(enp_puntos) > 0
-enp_puntos <- enp[enp_puntos, ]
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", size = 6)+
+  geom_sf(data = endemism_sf_spain, color = "red")+
+  geom_sf(data = malla_puntos_2_spain, fill = "blue", color = "transparent", alpha = .2)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
+malla_puntos_2_spain <- malla_puntos_2_spain %>% mutate(area = as.numeric(st_area(.)/1000000))
+malla_puntos_2_spain <- malla_puntos_2_spain %>% mutate(area = units::set_units(st_area(.), km^2))
 
-enp_puntos <- enp %>%
-  mutate(intersecta = lengths(st_intersects(enp, endemism_sf)) > 0) %>%  # Verifica si hay intersección
-  filter(intersecta == TRUE)  # Filtra los polígonos que tienen intersección con puntos
+malla_puntos_2_spain <- malla_puntos_2_spain %>% 
+  filter(area > 100)
+
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", size = 6)+
+  geom_sf(data = endemism_sf_spain, color = "red")+
+  geom_sf(data = malla_puntos_2_spain, fill = "blue", color = "transparent", alpha = .2)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
