@@ -38,15 +38,18 @@ library(sf)
 library(dplyr)
 library(ggplot2)
 
-
-
 #Carga capa desde csv
+```{}
 endemism <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+```
+# se comprueba su estructura
+```{}
 str(endemism)
-
+```
 # Convertir a objeto sf
+```{}
 endemism_sf <- st_as_sf(endemism, coords = c("Longitud", "Latitud"), crs = 4326)
-
+```
 # Comprobar el crs
 st_crs(endemism_sf) 
 

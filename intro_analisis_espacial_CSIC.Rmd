@@ -1,0 +1,177 @@
+---
+title: "Análisis de Endemismos en España Peninsular"
+author: "Tu Nombre Aquí"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+# Llamada a librerías
+```{r carga_librerias}
+library(sf) # Para datos espaciales
+library(dplyr) # Para manipulación de datos
+library(ggplot2) # Para visualización
+library(rnaturalearth) # Para descarga de datos espaciales de apoyo
+```
+
+# Llamada a datos de endemismos
+```{r carga_datos}
+endemism <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+```
+
+# Comprueba la estructura de los datos
+```{r estructura_datos}
+str(endemism)
+```
+
+# Conversión a objeto espacial (sf)
+```{r conversion_sf}
+endemism_sf <- st_as_sf(endemism, coords = c("Longitud", "Latitud"), crs = 4326)
+```
+
+# Comprobar sistema de referencia
+```{r crs_original}
+st_crs(endemism_sf)
+```
+
+# Transformación al sistema de referencia ETRS89 30N (EPSG: 25830)
+```{r transformacion_crs}
+endemism_sf <- st_transform(endemism_sf, crs = 25830)
+```
+
+# Mapa básico de endemismos
+```{r mapa_basico}
+ggplot() +
+  geom_sf(data = endemism_sf, color = "red")
+```
+
+# Mapa básico de endemismos agrupados por especie
+```{r mapa_especie}
+ggplot() +
+  geom_sf(data = endemism_sf, aes(color = Especie))
+```
+
+# Descarga de España desde Natural Earth (https://www.naturalearthdata.com/)
+```{r carga_mapa_espana}
+spain_map <- ne_states(country = "spain")
+```
+
+# Comprobar sistema de referencia
+```{r crs_espana}
+st_crs(spain_map)
+```
+
+# Transformación al sistema de referencia ETRS89 30N (EPSG: 25830)
+```{r transformacion_crs_espana}
+spain <- st_transform(spain_map, crs = 25830)
+```
+
+# Mapa básico de endemismos sobre España
+```{r mapa_espana_endemismos}
+ggplot() +
+  geom_sf(data = spain) +
+  geom_sf(data = endemism_sf, color = "red")
+```
+
+# Selección de España Peninsular mediante dplyr
+```{r seleccion_peninsular}
+spain_peninsular <- spain %>%
+  dplyr::select(Provincia = region) %>%
+  dplyr::filter(!Provincia %in% c("Islas Baleares", "Canary Is.", "Ceuta", "Melilla"))
+```
+
+# Mapa básico de endemismos sobre España Peninsular
+```{r mapa_peninsular_endemismos}
+ggplot() +
+  geom_sf(data = spain_peninsular) +
+  geom_sf(data = endemism_sf, color = "red")
+```
+
+# Disolución de las de provincias para obtener un solo poligono
+```{r disolucion_limites}
+spain_peninsular_dissolved <- st_union(spain_peninsular)
+```
+
+# Mapa básico de endemismos sobre España Peninsular unificada
+```{r visualizacion_poligono_disuelto}
+ggplot() +
+  geom_sf(data = spain_peninsular, color = "green4") +
+  geom_sf(data = spain_peninsular_dissolved, fill= "transparent", color = "black", linewidth  = 1) +
+  geom_sf(data = endemism_sf, color = "red")
+```
+
+# Descaraga y mapeado del mapa mundial con España Penínsular y endemismos
+```{r mapa_mundo_peninsula}
+world_map <- ne_countries(scale = 10)
+
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black") +
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
+  geom_sf(data = endemism_sf, color = "red", alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  theme_light()
+```
+
+# Creación de malla hexagonal 
+```{r creacion_malla}
+malla <- st_make_grid(spain_peninsular_dissolved, cellsize = 50000, square = FALSE)
+malla <- st_as_sf(malla)
+```
+
+# Intersección de malla con con España Penínsular
+```{r interseccion_malla_peninsula}
+malla <- st_intersection(malla, spain_peninsular_dissolved)
+```
+
+# Mapa básico de la malla intersectada con España Penínsular
+```{r mapa_malla_intersectada}
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black") +
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
+  geom_sf(data = malla, fill = "transparent") +
+  geom_sf(data = endemism_sf, color = "red", alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  theme_light()
+```
+
+# Intersección de endemismos con España Penínsular
+```{r interseccion_endemismos_peninsula}
+endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular_dissolved)
+```
+
+# Mapa básico de los endemismos intersectados con España Ibérica
+```{r mapa_endemismos_intersectados}
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black") +
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
+  geom_sf(data = endemism_sf, color = "green") +
+  geom_sf(data = endemism_sf_spain, color = "red") +
+  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  theme_light()
+```
+
+# Unión espacial de la malla con los endemismos
+```{r union_malla_endemismos}
+malla_puntos <- st_join(malla, endemism_sf_spain, join = st_intersects)
+malla_puntos <- malla_puntos %>% filter(Especie > 0)
+```
+
+# Mapa basico de la malla que contiene endemismos
+```{r mapa_malla_endemismos_unidos}
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black") +
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2) +
+  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  theme_light()
+```
+
+# Cálculo del área de las celdas de la malla
+```{r calculo_area_celdas}
+malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
+```
+
+
+
+
