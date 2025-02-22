@@ -164,10 +164,81 @@ ggplot() +
   geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
-  theme_light()
+  theme_light()+
+  geom_raster(dem)
 
 
 malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
+
+library(terra)
+
+# Instalar y cargar las librerías necesarias
+#install.packages(c("terra", "geodata", "rnaturalearth"))
+library(terra)
+library(geodata)
+# 1. Descargar datos raster: DEM y clima
+# Descargar un DEM (Digital Elevation Model) de la región de España
+dem <- geodata::elevation_30s(country = "ESP", path=tempdir())
+
+dem_df <- as.data.frame(dem, xy = TRUE)
+
+# 2. Renombrar las columnas (si es necesario)
+colnames(dem_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
+
+# 3. Usar ggplot2 para trazar el raster
+ggplot() +
+  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))
+
+# Descargar datos climáticos (temperatura máxima mensual) de la misma región
+tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 5, path=tempdir())
+
+# 2. Obtener límites vectoriales de España desde geodata
+espana <- geodata::gadm(country = "ESP", level = 0, path = tempdir()) # Obtener límites de nivel 0 (país)
+espana <- terra::vect(espana) # Convertir a objeto SpatVector de terra
+
+# 3. Sistemas de referencia de coordenadas (CRS)
+# Verificar el CRS de los datos
+crs(dem)
+crs(tmax)
+crs(espana)
+
+# Transformar el CRS de los datos vectoriales al CRS del DEM
+espana_proj <- terra::project(espana, crs(dem))
+
+# 4. Recortar datos raster con máscara y extensión
+# Recortar el DEM usando la extensión de España
+dem_recortado <- terra::crop(dem, espana_proj)
+
+# Recortar la temperatura máxima usando la máscara de España
+tmax_recortado <- terra::mask(tmax, espana_proj)
+
+# 5. Estadísticas zonales
+# Crear polígonos de ejemplo (provincias de España)
+# Nota: Para un análisis real, necesitarías un shapefile con los límites de las provincias.
+# Aquí crearemos polígonos aleatorios dentro de España para fines demostrativos.
+set.seed(123)
+provincias <- terra::spatSample(espana_proj, size = 10, "polygons")
+
+# Calcular la elevación media por provincia
+elevacion_media <- terra::zonal(dem_recortado, provincias, fun = "mean")
+
+# Imprimir los resultados
+print(elevacion_media)
+
+# 6. Visualización básica
+# Visualizar el DEM recortado
+plot(dem_recortado, main = "DEM Recortado de España")
+
+# Visualizar la temperatura máxima recortada
+plot(tmax_recortado[[1]], main = "Temperatura Máxima en Enero")
+
+# Visualizar los polígonos de las provincias
+plot(provincias, add = TRUE, border = "red")
+
+
+
+
+
 
 
 
@@ -222,3 +293,5 @@ malla_point <- st_intersection(enp, malla_puntos)
 ggplot() +
   geom_sf(data = spain_peninsular_dissolved)+
   geom_sf(data = malla_point, aes(fill = Tipo))
+
+
