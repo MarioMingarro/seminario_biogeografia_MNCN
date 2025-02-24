@@ -1,39 +1,3 @@
-library(dplyr)
-library(sf)
-library(ggplot2)
-
-
-# Cargar datos
-endemism <- read.csv("C:/Users/mario/Dropbox/CURSO_FORMACION_CSIC/Curso_formacion_csic/endemism.csv")
-
-# Asegurar que las coordenadas sean numéricas
-endemism <- endemism %>%
-  mutate(LATITUDE = as.numeric(LATITUDE),
-         LONGITUDE = as.numeric(LONGITUDE)) %>%
-  select(ESPECIE.2017, LATITUDE, LONGITUDE) %>%  # Quedarse solo con las columnas necesarias
-  distinct(LATITUDE, LONGITUDE, .keep_all = TRUE)  # Eliminar duplicados en latitud y longitud
-
-# Seleccionar 5 especies únicas al azar
-especies_seleccionadas <- endemism %>%
-  distinct(ESPECIE.2017) %>%
-  slice_sample(n = 3)
-
-# Filtrar datos con esas especies
-datos_filtrados <- endemism %>%
-  filter(ESPECIE.2017 %in% especies_seleccionadas$ESPECIE.2017)
-
-# Seleccionar 1000 registros aleatorios
-set.seed(123)  # Fijar semilla para reproducibilidad
-muestra <- datos_filtrados %>%
-  slice_sample(n = 100)
-
-# Exportar los datos seleccionados a un archivo CSV
-write.csv(muestra, "endemism_seleccionados.csv", row.names = FALSE)
-
-
-
-##########################
-
 library(sf)
 library(dplyr)
 library(ggplot2)
@@ -67,12 +31,17 @@ ggplot() +
   geom_sf(data = endemism_sf, aes(color = Especie))
 
 #Añadir mas datos utilizando funciones de paquetes
-library(rnaturalearth)
+library(geodata)
 
-spain_map <- ne_states(country = "spain")
+# Cargar datos de España usando geodata
+spain_map <- geodata::gadm(country = "ESP", level = 1, path = "data/") # Nivel 1 para provincias
+spain_map <- sf::st_as_sf(spain_map)
+
+# Transformar la proyección si es necesario (asumiendo que endemism_sf está en 25830)
 st_crs(spain_map) == st_crs(endemism_sf)
 spain <- sf::st_transform(spain_map, crs = 25830)
 st_crs(spain) == st_crs(endemism_sf)
+
 
 ggplot() +
   geom_sf(data = spain)+
@@ -81,11 +50,11 @@ ggplot() +
 
 # Ejercicio 1
 str(spain)
-unique(spain$region)
+unique(spain$NAME_1)
 
 spain_peninsular <- spain %>%
-  dplyr::select(Provincia = region) %>%
-  dplyr::filter(!Provincia %in% c("Islas Baleares", "Canary Is.", "Ceuta", "Melilla"))
+  dplyr::select(CCAA = NAME_1) %>%
+  dplyr::filter(!CCAA %in% c("Islas Baleares", "Islas Canarias", "Ceuta y Melilla"))
 
 ggplot() +
   geom_sf(data = spain_peninsular)+
@@ -100,7 +69,9 @@ ggplot() +
   geom_sf(data = spain_peninsular_dissolved, fill= "transparent", color = "black", linewidth  = 1)+
   geom_sf(data = endemism_sf, color = "red")
 
-world_map <- ne_countries(scale = 10)
+world_map <- geodata::world(path=tempdir(), resolution = 2) # Puedes ajustar la resolución
+world_map <- sf::st_as_sf(world_map)
+
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
@@ -140,6 +111,7 @@ ggplot() +
 
 
 # Ejercicio 2 ----
+# Seleccionar los registros dentro de España peninsular 
 endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular_dissolved)
 
 ggplot() +
@@ -164,20 +136,21 @@ ggplot() +
   geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
-  theme_light()+
-  geom_raster(dem)
+  theme_light()
 
 
 malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
 
 library(terra)
 
+
 # Instalar y cargar las librerías necesarias
 #install.packages(c("terra", "geodata", "rnaturalearth"))
-library(terra)
-library(geodata)
+
 # 1. Descargar datos raster: DEM y clima
 # Descargar un DEM (Digital Elevation Model) de la región de España
+
+spain_peninsular_vect <- terra::vect(spain_peninsular_dissolved)
 dem <- geodata::elevation_30s(country = "ESP", path=tempdir())
 
 dem_df <- as.data.frame(dem, xy = TRUE)
@@ -189,26 +162,50 @@ colnames(dem_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una
 ggplot() +
   geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))
 
-# Descargar datos climáticos (temperatura máxima mensual) de la misma región
-tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 5, path=tempdir())
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))+
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
+  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
 
-# 2. Obtener límites vectoriales de España desde geodata
-espana <- geodata::gadm(country = "ESP", level = 0, path = tempdir()) # Obtener límites de nivel 0 (país)
-espana <- terra::vect(espana) # Convertir a objeto SpatVector de terra
+# Cambiar resolucion a 0,25º
+dem <-  terra::aggregate(dem, 3, fun = "median")
 
 # 3. Sistemas de referencia de coordenadas (CRS)
 # Verificar el CRS de los datos
-crs(dem)
-crs(tmax)
-crs(espana)
+terra::crs(dem)
 
 # Transformar el CRS de los datos vectoriales al CRS del DEM
-espana_proj <- terra::project(espana, crs(dem))
+dem <- terra::project(dem, crs(spain_peninsular_vect))
+
+# Verificar el CRS de los datos
+terra::crs(dem) == terra::crs(spain_peninsular_vect)
 
 # 4. Recortar datos raster con máscara y extensión
 # Recortar el DEM usando la extensión de España
-dem_recortado <- terra::crop(dem, espana_proj)
+dem_recortado <- terra::crop(dem, spain_peninsular_vect)
+dem_recortado <- terra::mask(dem_recortado, spain_peninsular_vect)
+dem_recortado_df <- as.data.frame(dem_recortado, xy = TRUE)
 
+# 2. Renombrar las columnas (si es necesario)
+colnames(dem_recortado_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
+
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
+  geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
+  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
+
+# Descargar datos climáticos (temperatura máxima mensual) de la misma región
+tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 5, path=tempdir())
 # Recortar la temperatura máxima usando la máscara de España
 tmax_recortado <- terra::mask(tmax, espana_proj)
 
@@ -263,7 +260,7 @@ str(enp)
 st_crs(enp)
 
 aa <- st_difference(spain_peninsular_dissolved,st_union(enp), col = 'lightblue', add = TRUE)
-  st_difference(spain_peninsular_dissolved, enp)
+st_difference(spain_peninsular_dissolved, enp)
 ggplot() +
   geom_sf(data = spain)+
   geom_sf(data = aa)
