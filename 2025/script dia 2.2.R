@@ -150,8 +150,14 @@ library(terra)
 # 1. Descargar datos raster: DEM y clima
 # Descargar un DEM (Digital Elevation Model) de la región de España
 
-spain_peninsular_vect <- terra::vect(spain_peninsular_dissolved)
+
 dem <- geodata::elevation_30s(country = "ESP", path=tempdir())
+
+
+
+
+# Cambiar resolucion a 0,25º
+dem <-  terra::aggregate(dem, 3, fun = "median")
 
 dem_df <- as.data.frame(dem, xy = TRUE)
 
@@ -159,9 +165,6 @@ dem_df <- as.data.frame(dem, xy = TRUE)
 colnames(dem_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
 
 # 3. Usar ggplot2 para trazar el raster
-ggplot() +
-  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))
-
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
   geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
@@ -172,24 +175,23 @@ ggplot() +
            ylim = c(35,44)) +
   theme_light()
 
-# Cambiar resolucion a 0,25º
-dem <-  terra::aggregate(dem, 3, fun = "median")
+
 
 # 3. Sistemas de referencia de coordenadas (CRS)
 # Verificar el CRS de los datos
 terra::crs(dem)
 
-# Transformar el CRS de los datos vectoriales al CRS del DEM
-dem <- terra::project(dem, crs(spain_peninsular_vect))
+# Reproyección de datos vectoriales suele ser más rápida que la de rasteres
+spain_peninsular_vect <- sf::st_transform(spain_peninsular_dissolved, crs = 4326)
+spain_peninsular_vect <- terra::vect(spain_peninsular_vect)
 
-# Verificar el CRS de los datos
-terra::crs(dem) == terra::crs(spain_peninsular_vect)
 
 # 4. Recortar datos raster con máscara y extensión
 # Recortar el DEM usando la extensión de España
 dem_recortado <- terra::crop(dem, spain_peninsular_vect)
 dem_recortado <- terra::mask(dem_recortado, spain_peninsular_vect)
 dem_recortado_df <- as.data.frame(dem_recortado, xy = TRUE)
+
 
 # 2. Renombrar las columnas (si es necesario)
 colnames(dem_recortado_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
@@ -204,33 +206,85 @@ ggplot() +
            ylim = c(35,44)) +
   theme_light()
 
-# Descargar datos climáticos (temperatura máxima mensual) de la misma región
-tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 5, path=tempdir())
-# Recortar la temperatura máxima usando la máscara de España
-tmax_recortado <- terra::mask(tmax, espana_proj)
 
-# 5. Estadísticas zonales
-# Crear polígonos de ejemplo (provincias de España)
-# Nota: Para un análisis real, necesitarías un shapefile con los límites de las provincias.
-# Aquí crearemos polígonos aleatorios dentro de España para fines demostrativos.
-set.seed(123)
-provincias <- terra::spatSample(espana_proj, size = 10, "polygons")
+# Descargar datos climáticos (temperatura máxima mensual) de la misma región
+tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 0.5, path=tempdir())
+tmin <- geodata::worldclim_country(country = "ESP", var = "tmin", res = 0.5, path=tempdir())
+
+
+tmax <- mean(tmax)
+tmin <- mean(tmin)
+
+tmed <- (tmax + tmin) /2
+
+plot(tmed)
+
+malla_puntos_vect <- terra::vect(malla_puntos)
+
+# Verificar el CRS de los datos
+terra::crs(tmed) == terra::crs(malla_puntos_vect)
+
+tmed <- terra::project(tmed, terra::crs(malla_puntos_vect))
 
 # Calcular la elevación media por provincia
-elevacion_media <- terra::zonal(dem_recortado, provincias, fun = "mean")
+tmed_malla <- terra::zonal(tmed, malla_puntos_vect, fun = "median")
 
-# Imprimir los resultados
-print(elevacion_media)
+malla_puntos <- malla_puntos %>% 
+  mutate("T_med" = tmed_malla)
 
-# 6. Visualización básica
-# Visualizar el DEM recortado
-plot(dem_recortado, main = "DEM Recortado de España")
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
+  geom_sf(data = malla_puntos, aes(fill = mean), alpha = .2)+
+  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
 
-# Visualizar la temperatura máxima recortada
-plot(tmax_recortado[[1]], main = "Temperatura Máxima en Enero")
 
-# Visualizar los polígonos de las provincias
-plot(provincias, add = TRUE, border = "red")
+
+library(gridExtra)
+
+# Asegúrate de que tus datos (malla_puntos, world_map, spain_peninsular_dissolved,
+# dem_recortado_df, endemism_sf_spain) estén cargados correctamente.
+
+# Mapa existente
+mapa <- ggplot() +
+  geom_sf(data = world_map, fill = "gray30", color = "black") +
+  geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(data = malla_puntos, aes(col = Especie), alpha = 0.2) +
+  geom_sf(data = endemism_sf_spain, color = "red", alpha = 0.4) +
+    geom_sf(data = spain_peninsular_dissolved, color = "black", fill = "transparent", linewidth = 1) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()+
+  scale_fill_gradient(low = "white", high = "black")
+
+# Boxplot
+boxplot_plot <- ggplot() +
+  geom_boxplot(data = malla_puntos, aes(x = Especie, y = mean, fill = Especie)) +
+  theme(
+    panel.background = element_rect(fill = "gray80"), # Fondo gris oscuro
+    plot.background = element_rect(fill = "gray20"), # Fondo del gráfico gris oscuro
+    legend.position = "none",
+    line = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(color = "white"), # Titulo eje y blanco
+    axis.text.y = element_text(color="white") # texto eje y blanco
+  ) +
+  labs(y = "ºC")
+
+boxplot_grob <- ggplotGrob(boxplot_plot)
+
+# Ajustar la posición del boxplot en la parte inferior del mapa
+mapa + 
+  annotation_custom(grob = boxplot_grob, 
+                    xmin = -10, xmax = 4, 
+                    ymin = 34.6, # Ajustar la posición vertical (20% del rango del eje y)
+                    ymax = 35.8) # Ajustar la altura del boxplot
+
+
 
 
 
