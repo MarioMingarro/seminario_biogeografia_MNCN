@@ -156,7 +156,7 @@ colnames(dem_df) <- c("x", "y", "elevation")
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
   geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
-  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))+
+  geom_tile(data = dem_df, aes(x = x, y = y, fill = elevation))+
   geom_sf(data = resultado, fill = "blue", alpha = .2)+
   geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
@@ -207,7 +207,7 @@ head(resultado)
 # Mapa existente
 mapa <- ggplot() +
   geom_sf(data = world_map, fill = "gray30", color = "black") +
-  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation)) +
+  geom_tile(data = dem_df, aes(x = x, y = y, fill = elevation)) +
   geom_sf(data = resultado, aes(col = Especie), fill = "transparent", linewidth = 1) +
   geom_sf(data = endemismos_spain, color = "red", alpha = 0.4) +
   geom_sf(data = spain_peninsular_mask, color = "black", fill = "transparent", linewidth = 1) +

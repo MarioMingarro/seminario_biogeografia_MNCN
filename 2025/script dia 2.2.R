@@ -192,7 +192,7 @@ colnames(dem_recortado_df) <- c("x", "y", "elevation")
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
   geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
-  geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
+  geom_tile(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
   geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
