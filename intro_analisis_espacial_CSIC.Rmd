@@ -5,173 +5,237 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-
-# Llamada a librerías
+# Carga de librerías
 ```{r carga_librerias}
 library(sf) # Para datos espaciales
 library(dplyr) # Para manipulación de datos
 library(ggplot2) # Para visualización
-library(rnaturalearth) # Para descarga de datos espaciales de apoyo
+library(geodata) # Para descargar datos geográficos
+library(terra) # Para manejo de datos raster
 ```
 
-# Llamada a datos de endemismos
+# Carga de datos de endemismos desde CSV
 ```{r carga_datos}
-endemism <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+endemismos <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
 ```
 
-# Comprueba la estructura de los datos
+# Inspección de la estructura de los datos
 ```{r estructura_datos}
-str(endemism)
+str(endemismos)
 ```
 
 # Conversión a objeto espacial (sf)
 ```{r conversion_sf}
-endemism_sf <- st_as_sf(endemism, coords = c("Longitud", "Latitud"), crs = 4326)
+endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326)
 ```
 
-# Comprobar sistema de referencia
+# Comprobar el CRS original
 ```{r crs_original}
-st_crs(endemism_sf)
+st_crs(endemismos)
 ```
 
 # Transformación al sistema de referencia ETRS89 30N (EPSG: 25830)
 ```{r transformacion_crs}
-endemism_sf <- st_transform(endemism_sf, crs = 25830)
+endemismos <- st_transform(endemismos, crs = 25830)
 ```
 
-# Mapa básico de endemismos
-```{r mapa_basico}
-ggplot() +
-  geom_sf(data = endemism_sf, color = "red")
+# Verificar el CRS
+```{r crs_verificado}
+st_crs(endemismos)
 ```
 
-# Mapa básico de endemismos agrupados por especie
-```{r mapa_especie}
-ggplot() +
-  geom_sf(data = endemism_sf, aes(color = Especie))
-```
-
-# Descarga de España desde Natural Earth (https://www.naturalearthdata.com/)
+# Cargar datos de España usando el paquete geodata
 ```{r carga_mapa_espana}
-spain_map <- ne_states(country = "spain")
+spain <- geodata::gadm(country = "ESP", level = 1, path = tempdir())
+spain <- st_as_sf(spain)
+spain <- st_transform(spain, crs = 25830)
 ```
 
-# Comprobar sistema de referencia
-```{r crs_espana}
-st_crs(spain_map)
-```
-
-# Transformación al sistema de referencia ETRS89 30N (EPSG: 25830)
-```{r transformacion_crs_espana}
-spain <- st_transform(spain_map, crs = 25830)
-```
-
-# Mapa básico de endemismos sobre España
-```{r mapa_espana_endemismos}
-ggplot() +
-  geom_sf(data = spain) +
-  geom_sf(data = endemism_sf, color = "red")
-```
-
-# Selección de España Peninsular mediante dplyr
+# Selección de España Peninsular
 ```{r seleccion_peninsular}
 spain_peninsular <- spain %>%
-  dplyr::select(Provincia = region) %>%
-  dplyr::filter(!Provincia %in% c("Islas Baleares", "Canary Is.", "Ceuta", "Melilla"))
+  dplyr::select(CCAA = NAME_1) %>%
+  dplyr::filter(!CCAA %in% c("Islas Baleares", "Islas Canarias", "Ceuta y Melilla"))
+spain_peninsular_mask <- st_union(spain_peninsular)
+```
+# Creación de la máscara de España Peninsular
+```{r creacion mascara}
+spain_peninsular_mask <- st_union(spain_peninsular)
 ```
 
-# Mapa básico de endemismos sobre España Peninsular
+# Visualización de endemismos sobre España Peninsular
 ```{r mapa_peninsular_endemismos}
 ggplot() +
-  geom_sf(data = spain_peninsular) +
-  geom_sf(data = endemism_sf, color = "red")
-```
-
-# Disolución de las de provincias para obtener un solo poligono
-```{r disolucion_limites}
-spain_peninsular_dissolved <- st_union(spain_peninsular)
-```
-
-# Mapa básico de endemismos sobre España Peninsular unificada
-```{r visualizacion_poligono_disuelto}
-ggplot() +
   geom_sf(data = spain_peninsular, color = "green4") +
-  geom_sf(data = spain_peninsular_dissolved, fill= "transparent", color = "black", linewidth  = 1) +
-  geom_sf(data = endemism_sf, color = "red")
+  geom_sf(data = spain_peninsular_mask, fill = "transparent", color = "black", linewidth = 1) +
+  geom_sf(data = endemismos, color = "red")
 ```
 
-# Descaraga y mapeado del mapa mundial con España Penínsular y endemismos
+# Descarga y visualización del mapa mundial con España Peninsular y endemismos
 ```{r mapa_mundo_peninsula}
-world_map <- ne_countries(scale = 10)
+world_map <- geodata::world(path = tempdir(), resolution = 2)
+world_map <- st_as_sf(world_map)
 
 ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black") +
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
-  geom_sf(data = endemism_sf, color = "red", alpha = .4) +
-  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  geom_sf(data = world_map, fill = "gray30", color = "black") +
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth = 1) +
+  geom_sf(data = endemismos, color = "red", alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
   theme_light()
 ```
 
-# Creación de malla hexagonal 
+# Creación de malla hexagonal
 ```{r creacion_malla}
-malla <- st_make_grid(spain_peninsular_dissolved, cellsize = 50000, square = FALSE)
+malla <- st_make_grid(spain_peninsular_mask, cellsize = 50000, square = FALSE)
 malla <- st_as_sf(malla)
-```
-
-# Intersección de malla con con España Penínsular
-```{r interseccion_malla_peninsula}
-malla <- st_intersection(malla, spain_peninsular_dissolved)
-```
-
-# Mapa básico de la malla intersectada con España Penínsular
-```{r mapa_malla_intersectada}
 ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black") +
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
-  geom_sf(data = malla, fill = "transparent") +
-  geom_sf(data = endemism_sf, color = "red", alpha = .4) +
-  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = malla, fill = "transparent")+
+  geom_sf(data = endemismos, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
   theme_light()
 ```
 
-# Intersección de endemismos con España Penínsular
+# Intersección de malla hexagonal con España Peninsular
+```{r malla peninsula}
+malla <- st_intersection(malla, spain_peninsular_mask)
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = malla, fill = "transparent")+
+  geom_sf(data = endemismos, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
+```
+
+# Seleccionar los registros dentro de España peninsular
 ```{r interseccion_endemismos_peninsula}
-endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular_dissolved)
-```
-
-# Mapa básico de los endemismos intersectados con España Ibérica
-```{r mapa_endemismos_intersectados}
+endemismos_spain <- st_intersection(endemismos, spain_peninsular_mask)
 ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black") +
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
-  geom_sf(data = endemism_sf, color = "green") +
-  geom_sf(data = endemism_sf_spain, color = "red") +
-  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = endemismos, color = "green")+
+  geom_sf(data = endemismos_spain, color = "red")+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
+  theme_light()
+```
+# Relacionar el número de endemismos por cuadrícula 
+```{r }
+resultado <- st_join(malla, endemismos_spain, join = st_intersects)
+resultado <- resultado %>%  
+  filter(Especie > 0) # selecciona solo aquellas cuadriculas con al menos 1 presencia
+
+ggplot() +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = resultado, fill = "blue", alpha = .2)+
+  geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
   theme_light()
 ```
 
-# Unión espacial de la malla con los endemismos
-```{r union_malla_endemismos}
-malla_puntos <- st_join(malla, endemism_sf_spain, join = st_intersects)
-malla_puntos <- malla_puntos %>% filter(Especie > 0)
+
+# Raster
+
+## Descarga modelo digital de elevaciones 
+```{r }
+dem <- geodata::elevation_30s(country = "ESP", path = tempdir()) # descarga
+dem <- terra::aggregate(dem, 3, fun = "median") #cambia resolución
+
+dem_df <- as.data.frame(dem, xy = TRUE)
+colnames(dem_df) <- c("x", "y", "elevation")
 ```
 
-# Mapa basico de la malla que contiene endemismos
-```{r mapa_malla_endemismos_unidos}
+# Visualización del MDE como mapa base
+```{r visualizacion_dem}
 ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black") +
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1) +
-  geom_sf(data = malla_puntos, fill = "blue", alpha = .2) +
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4) +
-  coord_sf(xlim = c(-10, 4), ylim = c(35,44)) +
+  geom_sf(data = world_map , fill = "gray30", color = "black")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))+
+  geom_sf(data = resultado, fill = "blue", alpha = .2)+
+  geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
+  coord_sf(xlim = c(-10, 4),
+           ylim = c(35,44)) +
   theme_light()
 ```
 
-# Cálculo del área de las celdas de la malla
-```{r calculo_area_celdas}
-malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
+# Descarga datos climaticos temperatura maxima y minima
+```{r }
+tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 0.5, path = tempdir())
+tmin <- geodata::worldclim_country(country = "ESP", var = "tmin", res = 0.5, path = tempdir())
+
+plot(tmax) #visualizar rápido raster
+```
+# Cálculo de medias mñaximas y minimas
+```{r }
+tmax_media <- mean(tmax)
+tmin_media <- mean(tmin)
+
+plot(tmax_media)
+```
+# Cálculo de la temperatura media mensual
+```{r }
+tmed_mensual <- (tmax + tmin) / 2
+
+plot(tmed_mensual)
+```
+# Cálculo de la temperatura media anual
+```{r }
+tmed_anual <- (tmax_media + tmin_media) / 2
+
+plot(tmed_anual)
+```
+
+# Unión de datos climáticos con la malla
+```{r union_malla_clima}
+resultado_vect <- terra::vect(resultado) # spatvector para trabjar mejor con terra 
+terra::crs(tmed_anual) == terra::crs(resultado_vect)# Verificar el CRS de los datos
+tmed_anual <- terra::project(tmed_anual, terra::crs(resultado_vect))
+tmed_anual_malla <- terra::zonal(tmed_anual, resultado_vect, fun = "median")
+resultado <- mutate(resultado, T_med = tmed_anual_malla$mean)
+head(resultado)
 ```
 
 
+# Presentación de resultados
+```{r presentacion_resultados}
+# Mapa existente
+mapa <- ggplot() +
+  geom_sf(data = world_map, fill = "gray30", color = "black") +
+  geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(data = resultado, aes(col = Especie), fill = "transparent", linewidth = 1) +
+  geom_sf(data = endemismos_spain, color = "red", alpha = 0.4) +
+  geom_sf(data = spain_peninsular_mask, color = "black", fill = "transparent", linewidth = 1) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light() +
+  scale_fill_gradient(low = "white", high = "black")
 
+# Boxplot
+boxplot_plot <- ggplot() +
+  geom_boxplot(data = resultado, aes(x = Especie, y = T_med, fill = Especie)) +
+  theme(
+    panel.background = element_rect(fill = "gray80"), # Fondo gris oscuro
+    plot.background = element_rect(fill = "gray20"), # Fondo del gráfico gris oscuro
+    legend.position = "none",
+    line = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(color = "white"), # Titulo eje y blanco
+    axis.text.y = element_text(color = "white") # texto eje y blanco
+  ) +
+  labs(y = "ºC")
 
+boxplot_grob <- ggplotGrob(boxplot_plot)
+
+# Ajustar la posición del boxplot en la parte inferior del mapa
+mapa + 
+  annotation_custom(grob = boxplot_grob, 
+                    xmin = -10, xmax = 4, 
+                    ymin = 34.6, # Ajustar la posición vertical (20% del rango del eje y)
+                    ymax = 35.8) # Ajustar la altura del boxplot
+```

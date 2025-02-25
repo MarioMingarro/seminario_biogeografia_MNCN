@@ -1,51 +1,54 @@
 library(sf)
 library(dplyr)
 library(ggplot2)
+library(geodata)
+library(terra)
 
 #Carga capa desde csv
 
-endemism <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+endemismos <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
 
 # se comprueba su estructura
 
-str(endemism)
+str(endemismos)
 
 # Convertir a objeto sf
 
-endemism_sf <- st_as_sf(endemism, coords = c("Longitud", "Latitud"), crs = 4326)
+endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326)
 
 # Comprobar el crs
-st_crs(endemism_sf) 
+st_crs(endemismos) 
 
 # Transformar el shapefile a ETRS89 30N (EPSG: 25830)
-endemism_sf <- sf::st_transform(endemism_sf, crs = 25830)
+endemismos <- sf::st_transform(endemismos, crs = 25830)
 
 
 
 # Mapa básico  con ggplot
 ggplot() +
-  geom_sf(data = endemism_sf, color = "red")
+  geom_sf(data = endemismos, color = "red")
 
 # Mapa combinado con ENP y endemismos
 ggplot() +
-  geom_sf(data = endemism_sf, aes(color = Especie))
+  geom_sf(data = endemismos, aes(color = Especie))
 
 #Añadir mas datos utilizando funciones de paquetes
-library(geodata)
+
+
 
 # Cargar datos de España usando geodata
-spain_map <- geodata::gadm(country = "ESP", level = 1, path = "data/") # Nivel 1 para provincias
-spain_map <- sf::st_as_sf(spain_map)
+spain <- geodata::gadm(country = "ESP", level = 1, path = tempdir()) # Nivel 1 para provincias
+spain <- sf::st_as_sf(spain)
 
-# Transformar la proyección si es necesario (asumiendo que endemism_sf está en 25830)
-st_crs(spain_map) == st_crs(endemism_sf)
-spain <- sf::st_transform(spain_map, crs = 25830)
-st_crs(spain) == st_crs(endemism_sf)
+# Transformar la proyección si es necesario (asumiendo que endemismos está en 25830)
+st_crs(spain) == st_crs(endemismos)
+spain <- sf::st_transform(spain, crs = 25830)
+st_crs(spain) == st_crs(endemismos)
 
 
 ggplot() +
   geom_sf(data = spain)+
-  geom_sf(data = endemism_sf, color = "red")
+  geom_sf(data = endemismos, color = "red")
 
 
 # Ejercicio 1
@@ -58,16 +61,17 @@ spain_peninsular <- spain %>%
 
 ggplot() +
   geom_sf(data = spain_peninsular)+
-  geom_sf(data = endemism_sf, color = "red")
+  geom_sf(data = endemismos, color = "red")
 
 #######
 
-spain_peninsular_dissolved <- st_union(spain_peninsular)
+spain_peninsular_mask <- st_union(spain_peninsular)
+spain_peninsular_mask <- sf::st_as_sf(spain_peninsular_mask)
 
 ggplot() +
   geom_sf(data = spain_peninsular, color = "green4") +
-  geom_sf(data = spain_peninsular_dissolved, fill= "transparent", color = "black", linewidth  = 1)+
-  geom_sf(data = endemism_sf, color = "red")
+  geom_sf(data = spain_peninsular_mask, fill= "transparent", color = "black", linewidth  = 1)+
+  geom_sf(data = endemismos, color = "red")
 
 world_map <- geodata::world(path=tempdir(), resolution = 2) # Puedes ajustar la resolución
 world_map <- sf::st_as_sf(world_map)
@@ -75,35 +79,34 @@ world_map <- sf::st_as_sf(world_map)
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
-  geom_sf(data = endemism_sf, color = "red", alpha = .4)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = endemismos, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
 
 
 # Crear malla 
-malla <- st_make_grid(spain_peninsular_dissolved, cellsize = 50000, square = FALSE)
-class(malla)
+malla <- st_make_grid(spain_peninsular_mask, cellsize = 50000, square = FALSE)
 malla <- sf::st_as_sf(malla)
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
   geom_sf(data = malla, fill = "transparent")+
-  geom_sf(data = endemism_sf, color = "red", alpha = .4)+
+  geom_sf(data = endemismos, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
 
 
-malla <- st_intersection(malla, spain_peninsular_dissolved)
+malla <- st_intersection(malla, spain_peninsular_mask)
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
   geom_sf(data = malla, fill = "transparent")+
-  geom_sf(data = endemism_sf, color = "red", alpha = .4)+
+  geom_sf(data = endemismos, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
@@ -112,28 +115,28 @@ ggplot() +
 
 # Ejercicio 2 ----
 # Seleccionar los registros dentro de España peninsular 
-endemism_sf_spain <- st_intersection(endemism_sf, spain_peninsular_dissolved)
+endemismos_spain <- st_intersection(endemismos, spain_peninsular_mask)
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
-  geom_sf(data = endemism_sf, color = "green")+
-  geom_sf(data = endemism_sf_spain, color = "red")+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
+  geom_sf(data = endemismos, color = "green")+
+  geom_sf(data = endemismos_spain, color = "red")+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
 
 #---------
 
-malla_puntos <- st_join(malla, endemism_sf_spain, join = st_intersects)
+malla_puntos <- st_join(malla, endemismos_spain, join = st_intersects)
 malla_puntos <- malla_puntos %>%
   filter(Especie > 0)
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
@@ -141,36 +144,29 @@ ggplot() +
 
 malla_puntos <- malla_puntos %>% mutate(area_km2 = as.numeric(st_area(.)/1000000))
 
-library(terra)
 
 
-# Instalar y cargar las librerías necesarias
-#install.packages(c("terra", "geodata", "rnaturalearth"))
 
-# 1. Descargar datos raster: DEM y clima
+# RAster
 # Descargar un DEM (Digital Elevation Model) de la región de España
 
-
 dem <- geodata::elevation_30s(country = "ESP", path=tempdir())
-
-
-
 
 # Cambiar resolucion a 0,25º
 dem <-  terra::aggregate(dem, 3, fun = "median")
 
 dem_df <- as.data.frame(dem, xy = TRUE)
 
-# 2. Renombrar las columnas (si es necesario)
+# 2. Renombrar las columnas 
 colnames(dem_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
 
 # 3. Usar ggplot2 para trazar el raster
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
   geom_raster(data = dem_df, aes(x = x, y = y, fill = elevation))+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
@@ -178,11 +174,11 @@ ggplot() +
 
 
 # 3. Sistemas de referencia de coordenadas (CRS)
-# Verificar el CRS de los datos
+# Verificar el CRS de los datos. siempre mas facil proyectar vector que raster
 terra::crs(dem)
 
 # Reproyección de datos vectoriales suele ser más rápida que la de rasteres
-spain_peninsular_vect <- sf::st_transform(spain_peninsular_dissolved, crs = 4326)
+spain_peninsular_vect <- sf::st_transform(spain_peninsular_mask, crs = 4326)
 spain_peninsular_vect <- terra::vect(spain_peninsular_vect)
 
 
@@ -191,17 +187,14 @@ spain_peninsular_vect <- terra::vect(spain_peninsular_vect)
 dem_recortado <- terra::crop(dem, spain_peninsular_vect)
 dem_recortado <- terra::mask(dem_recortado, spain_peninsular_vect)
 dem_recortado_df <- as.data.frame(dem_recortado, xy = TRUE)
-
-
-# 2. Renombrar las columnas (si es necesario)
-colnames(dem_recortado_df) <- c("x", "y", "elevation") # Asumiendo que tu raster tiene una sola capa llamada "elevation"
+colnames(dem_recortado_df) <- c("x", "y", "elevation")
 
 ggplot() +
   geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
+  geom_sf(data = spain_peninsular_mask, color = "black", linewidth  = 1)+
   geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)+
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
+  geom_sf(data = endemismos_spain, color = "red", alpha = .4)+
   coord_sf(xlim = c(-10, 4),
            ylim = c(35,44)) +
   theme_light()
@@ -211,14 +204,19 @@ ggplot() +
 tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 0.5, path=tempdir())
 tmin <- geodata::worldclim_country(country = "ESP", var = "tmin", res = 0.5, path=tempdir())
 
+#visualizar rápido raster
+plot(tmax)
 
 tmax <- mean(tmax)
 tmin <- mean(tmin)
+
+plot(tmax)
 
 tmed <- (tmax + tmin) /2
 
 plot(tmed)
 
+# convertir a spatvector para trabjar mejor con terra
 malla_puntos_vect <- terra::vect(malla_puntos)
 
 # Verificar el CRS de los datos
@@ -226,43 +224,30 @@ terra::crs(tmed) == terra::crs(malla_puntos_vect)
 
 tmed <- terra::project(tmed, terra::crs(malla_puntos_vect))
 
-# Calcular la elevación media por provincia
+# Calcular la elevación media por cuadricula
 tmed_malla <- terra::zonal(tmed, malla_puntos_vect, fun = "median")
 
-malla_puntos <- malla_puntos %>% 
-  mutate("T_med" = tmed_malla)
+malla_puntos <- mutate(malla_puntos, T_med = tmed_malla$mean)
 
-ggplot() +
-  geom_sf(data = world_map , fill = "gray30", color = "black")+
-  geom_sf(data = spain_peninsular_dissolved, color = "black", linewidth  = 1)+
-  geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation))+
-  geom_sf(data = malla_puntos, aes(fill = mean), alpha = .2)+
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = .4)+
-  coord_sf(xlim = c(-10, 4),
-           ylim = c(35,44)) +
-  theme_light()
+head(malla_puntos)
 
-
-
+# Presentación resultados
 library(gridExtra)
-
-# Asegúrate de que tus datos (malla_puntos, world_map, spain_peninsular_dissolved,
-# dem_recortado_df, endemism_sf_spain) estén cargados correctamente.
 
 # Mapa existente
 mapa <- ggplot() +
   geom_sf(data = world_map, fill = "gray30", color = "black") +
   geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation)) +
-  geom_sf(data = malla_puntos, aes(col = Especie), alpha = 0.2) +
-  geom_sf(data = endemism_sf_spain, color = "red", alpha = 0.4) +
-    geom_sf(data = spain_peninsular_dissolved, color = "black", fill = "transparent", linewidth = 1) +
+  geom_sf(data = malla_puntos, aes(col = Especie),fill = "transparent", linewidth = 1) +
+  geom_sf(data = endemismos_spain, color = "red", alpha = 0.4) +
+  geom_sf(data = spain_peninsular_mask, color = "black", fill = "transparent", linewidth = 1) +
   coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
   theme_light()+
   scale_fill_gradient(low = "white", high = "black")
 
 # Boxplot
 boxplot_plot <- ggplot() +
-  geom_boxplot(data = malla_puntos, aes(x = Especie, y = mean, fill = Especie)) +
+  geom_boxplot(data = malla_puntos, aes(x = Especie, y = T_med, fill = Especie)) +
   theme(
     panel.background = element_rect(fill = "gray80"), # Fondo gris oscuro
     plot.background = element_rect(fill = "gray20"), # Fondo del gráfico gris oscuro
@@ -313,36 +298,36 @@ class(enp)
 str(enp)
 st_crs(enp)
 
-aa <- st_difference(spain_peninsular_dissolved,st_union(enp), col = 'lightblue', add = TRUE)
-st_difference(spain_peninsular_dissolved, enp)
+aa <- st_difference(spain_peninsular_mask,st_union(enp), col = 'lightblue', add = TRUE)
+st_difference(spain_peninsular_mask, enp)
 ggplot() +
   geom_sf(data = spain)+
   geom_sf(data = aa)
 #Utilizar mas de dos capas comparar crs
-st_crs(endemism_sf) == st_crs(enp)
+st_crs(endemismos) == st_crs(enp)
 
 # Transformar el shapefile a 25830
 enp <- sf::st_transform(enp, crs = 25830)
-endemism_sf <- sf::st_transform(endemism_sf, crs = 25830)
+endemismos <- sf::st_transform(endemismos, crs = 25830)
 malla_puntos <- malla %>%
-  mutate(num_intersec = lengths(st_intersects(malla, endemism_sf))) %>% 
+  mutate(num_intersec = lengths(st_intersects(malla, endemismos))) %>% 
   filter(num_intersec > 0)
 
 ggplot() +
-  geom_sf(data = spain_peninsular_dissolved)+
-  geom_sf(data = endemism_sf, color = "red")+
+  geom_sf(data = spain_peninsular_mask)+
+  geom_sf(data = endemismos, color = "red")+
   geom_sf(data = malla, fill = "transparent")+
   geom_sf(data = malla_puntos, fill = "blue", alpha = .2)
 
 ggplot() +
-  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = spain_peninsular_mask)+
   geom_sf(data = malla_puntos, aes(fill = Especie))
 
 malla_point <- st_join(enp, malla_puntos,join = st_disjoint)
 malla_point <- st_intersection(enp, malla_puntos)
 
 ggplot() +
-  geom_sf(data = spain_peninsular_dissolved)+
+  geom_sf(data = spain_peninsular_mask)+
   geom_sf(data = malla_point, aes(fill = Tipo))
 
 
