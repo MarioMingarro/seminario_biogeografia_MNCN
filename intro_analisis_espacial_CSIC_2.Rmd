@@ -15,6 +15,10 @@ Este documento muestra un ejemplo de análisis espacial para tres endemismos de 
 
 ## Los endemismos
 
+*Euchloe bazae*
+
+<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Euchloe_bazae.jpg" width="300" height="200">
+
 *Erebia palarica*
 
 <img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Erebia_palarica.jpg" width="300" height="200">
@@ -23,13 +27,10 @@ Este documento muestra un ejemplo de análisis espacial para tres endemismos de 
 
 <img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Erebia_rondoui.jpg" width="300" height="200">
 
-*Euchloe bazae*
-
-<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Euchloe_bazae.jpg" width="300" height="200">
 
 ## Carga de librerías
 
-Cargamos las librerías necesarias para el análisis espacial en R.
+Cargar las librerías para el análisis espacial en R.
 
 ```{r}
 library(dplyr) # Manipulación de datos
@@ -45,15 +46,18 @@ library(gridExtra) # Organiza múltiples gráficos
 
 ## Importación de datos
 
-Cargamos el archivo CSV con los datos de endemismos delimitados por comas.
+Cargar el archivo CSV con los datos de endemismos delimitados por comas.
 
-```{r carga_datos}
+```{r carga_datos, include=FALSE}
 endemismos <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+```
+```{r carga_datos_2, eval=FALSE}
+endemismos <- read.csv2("DIRECTORIO_PERSONAL/endemism_seleccionados.csv")
 ```
 
 ## Exploración de la estructura de los datos
 
-Es importante inspeccionar el dataframe para conocer las columnas disponibles y sus tipos de datos.
+Es importante conocer la estructura y el nombre de las columnas.
 
 ```{r estructura_datos}
 str(endemismos)
@@ -61,7 +65,8 @@ str(endemismos)
 
 ## Conversión a objeto espacial (sf)
 
-Convertimos el dataframe a un objeto espacial `sf`, usando las columnas de coordenadas.
+Convertir el dataframe a un objeto espacial `sf`, usando las columnas que contienen las coordenadas.
+En este caso se asume que el sistema de refrencia de las coordenadas es el WGS84 (EPSG: 4326).  
 
 ```{r conversion_sf}
 endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326)
@@ -69,12 +74,14 @@ endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326
 
 ## Creación de mapas
 
-Generamos mapas básicos para visualizar los puntos de los endemismos.
+Generar el mapa más básico, mediante `ggplot`, para visualizar la ubicación de los endemismos.
 
 ```{r}
 ggplot() +
   geom_sf(data = endemismos, color = "red")
 ```
+
+Mejorar la visualización, mendiante `aes()`, coloreando las presencias según la especie.
 
 ```{r}
 ggplot() +
@@ -83,27 +90,28 @@ ggplot() +
 
 ## Comprobación y transformación del sistema de referencia
 
-Antes de realizar análisis espaciales, verificamos el sistema de referencia espacial (CRS) de los datos y los transformamos si es necesario.
+Antes de realizar cualquier análisis espacial, verificar el sistema de referencia.
 
 ```{r crs_original}
 st_crs(endemismos)
 ```
 
-Transformamos los datos al sistema de referencia ETRS89 30N (EPSG: 25830), comúnmente utilizado en estudios espaciales en España.
+Transformar los datos al sistema de referencia (SR) ETRS89 30N (EPSG: 25830), uno de los sistemas metricos implementados en España.
+Este será el SR del proyecto.
 
 ```{r transformacion_crs}
 endemismos <- st_transform(endemismos, crs = 25830)
 ```
 
-Verificamos que la transformación se ha realizado correctamente.
+Verificar que la transformación se ha realizado correctamente.
 
 ```{r crs_verificado}
 st_crs(endemismos)
 ```
 
-## Carga y preparación de datos geográficos de España
+## Carga y preparación de datos geográficos de apoyo
 
-Descargamos los datos administrativos de España y los convertimos en objetos espaciales.
+Descargar los datos administrativos de España, convertirlos en objetos espaciales `sf` y transformarlos al SR del proyecto.
 
 ```{r carga_mapa_espana}
 spain <- geodata::gadm(country = "ESP", level = 1, path = tempdir())
@@ -111,7 +119,7 @@ spain <- st_as_sf(spain)
 spain <- st_transform(spain, crs = 25830)
 ```
 
-Filtramos para obtener solo la España Peninsular, excluyendo islas y ciudades autónomas.
+Filtrar las CCAA para obtener solo la España Peninsular, este será el área de estudio.
 
 ```{r seleccion_peninsular}
 spain_peninsular <- spain %>%
@@ -119,13 +127,13 @@ spain_peninsular <- spain %>%
   dplyr::filter(!CCAA %in% c("Islas Baleares", "Islas Canarias", "Ceuta y Melilla"))
 ```
 
-Creamos una máscara de la España Peninsular a partir de la unión de sus geometrías.
+Crear una máscara del área de estudio a partir de la unión de sus geometrías.
 
 ```{r creacion_mascara}
 spain_peninsular_mask <- st_union(spain_peninsular)
 ```
 
-Visualizamos la España Peninsular y los endemismos sobre ella.
+Visualizar el área de estudio y los endemismos sobre ella.
 
 ```{r mapa_peninsular_endemismos}
 ggplot() +
@@ -137,16 +145,14 @@ ggplot() +
   geom_sf(data = endemismos, color = "red")
 ```
 
-## Descarga y visualización del mapa mundial
-
-Descargamos un mapa mundial y lo convertimos en un objeto `sf`.
+Descargar un mapa mundial y convertirlo en un objeto `sf`.
 
 ```{r mapa_mundo_peninsula}
 world_map <- geodata::world(path = tempdir(), resolution = 2)
 world_map <- st_as_sf(world_map)
 ```
 
-Visualizamos el mapa mundial con España Peninsular y los endemismos.
+Visualizar el mapa mundial con el área de estudio y los endemismos.
 
 ```{r}
 ggplot() +
@@ -163,18 +169,18 @@ ggplot() +
   theme_light()
 ```
 
-## Creación de una malla hexagonal para análisis espacial
+## Creación de una cuadricula hexagonal para análisis espacial
 
-Generamos una malla hexagonal con celdas de 50 km de lado.
+Generar una cuadrícula hexagonal con celdas de 50 km de lado.
 
-```{r creacion_malla}
-malla <- st_make_grid(spain_peninsular_mask, cellsize = 50000, square = FALSE)
-malla <- st_as_sf(malla)
+```{r creacion_cuadricula}
+cuadricula <- st_make_grid(spain_peninsular_mask, cellsize = 50000, square = FALSE)
+cuadricula <- st_as_sf(cuadricula)
 ```
 
-Visualización de la malla generada
+Visualización de la cuadricula generada.
 
-```{r visualizar malla}
+```{r visualizar cuadricula}
 ggplot() +
   geom_sf(data = world_map ,
           fill = "gray30",
@@ -182,7 +188,7 @@ ggplot() +
   geom_sf(data = spain_peninsular_mask,
           color = "black",
           linewidth  = 1) +
-  geom_sf(data = malla, fill = "transparent") +
+  geom_sf(data = cuadricula, fill = "transparent") +
   geom_sf(data = endemismos,
           color = "red",
           alpha = .4) +
@@ -190,16 +196,15 @@ ggplot() +
   theme_light()
 ```
 
+Intersecar la cuadrícula con el área de estudio para limitar la extensión.
 
-Intersección de la malla con España Peninsular para limitar la extensión.
-
-```{r malla_peninsula}
-malla <- st_intersection(malla, spain_peninsular_mask)
+```{r cuadricula_peninsula}
+cuadricula <- st_intersection(cuadricula, spain_peninsular_mask)
 ```
 
-Visualización de la malla peninsular
+Visualizar de la cuadricula nueva.
 
-```{r visualizar_malla_peninsular}
+```{r visualizar_cuadricula_peninsular}
 ggplot() +
   geom_sf(data = world_map ,
           fill = "gray30",
@@ -207,7 +212,7 @@ ggplot() +
   geom_sf(data = spain_peninsular_mask,
           color = "black",
           linewidth  = 1) +
-  geom_sf(data = malla, fill = "transparent") +
+  geom_sf(data = cuadricula, fill = "transparent") +
   geom_sf(data = endemismos,
           color = "red",
           alpha = .4) +
@@ -215,7 +220,8 @@ ggplot() +
   theme_light()
 ```
 
-Seleccionamos los registros de endemismos que están dentro de la España Peninsular.
+Seleccionar las presencias de endemismos que están dentro del área de estudio.
+`st_intersection`
 
 ```{r interseccion_endemismos_peninsula}
 endemismos_spain <- st_intersection(endemismos, spain_peninsular_mask)
@@ -238,7 +244,7 @@ ggplot() +
 
 Relacionar el número de endemismos por cuadrícula
 ```{r}
-resultado <- st_join(malla, endemismos_spain, join = st_intersects)
+resultado <- st_join(cuadricula, endemismos_spain, join = st_intersects)
 resultado <- resultado %>%  
   filter(Especie > 0) # selecciona solo aquellas cuadriculas con al menos 1 presencia
 ```
@@ -307,7 +313,7 @@ terra::crs(dem)
 ```
 
 Reproyección de datos vectoriales suele ser más rápida que la de rasteres
-Convertimos la malla a un objeto vectorial de `terra` para trabajar con datos raster mas eficientemente.
+Convertimos la cuadricula a un objeto vectorial de `terra` para trabajar con datos raster mas eficientemente.
 
 ```{r}
 spain_peninsular_vect <- sf::st_transform(spain_peninsular_mask, crs = 4326)
@@ -377,7 +383,7 @@ tmed_anual <- (tmax_media + tmin_media) /2
 plot(tmed_anual)
 ```
 
-Unión de datos climáticos con la malla
+Unión de datos climáticos con la cuadricula
 ```{r}
 resultado_vect <- terra::vect(resultado)
 terra::crs(tmed_anual) == terra::crs(resultado_vect)
@@ -391,8 +397,8 @@ tmed_anual <- terra::project(tmed_anual, terra::crs(resultado_vect))
 
 Calcular la elevación media por cuadricula
 ```{r}
-tmed_anual_malla <- terra::zonal(tmed_anual, resultado_vect, fun = "median")
-resultado <- mutate(resultado, T_med = tmed_anual_malla$mean)
+tmed_anual_cuadricula <- terra::zonal(tmed_anual, resultado_vect, fun = "median")
+resultado <- mutate(resultado, T_med = tmed_anual_cuadricula$mean)
 ```
 
 ```{r}

@@ -1,11 +1,21 @@
 ---
-title: "Análisis de Endemismos en España Peninsular"
-author: "mml"
-date: "`r Sys.Date()`"
-output: html_document
+title: "Ejemplo prático análisis espacial con R"
+author: "Mario Mingarro"
+date: "Marzo 2025"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
 ---
 
-# Carga de librerías
+
+## Introducción
+Este documento realiza un análisis espacial de endemismos en la España Peninsular, utilizando datos de especies y variables ambientales como elevación y temperatura.
+
+## Carga de librerías
+Cargamos las librerías necesarias para el análisis espacial y la visualización de datos.
+
+
 ```{r carga_librerias}
 library(sf) # Para datos espaciales
 library(dplyr) # Para manipulación de datos
@@ -14,12 +24,12 @@ library(geodata) # Para descargar datos geográficos
 library(terra) # Para manejo de datos raster
 ```
 
-# Carga de datos de endemismos desde CSV
+## Carga de datos de endemismos desde CSV
 ```{r carga_datos}
 endemismos <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
 ```
 
-# Inspección de la estructura de los datos
+## Estructura de los datos
 ```{r estructura_datos}
 str(endemismos)
 ```
@@ -27,6 +37,17 @@ str(endemismos)
 # Conversión a objeto espacial (sf)
 ```{r conversion_sf}
 endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326)
+```
+# Mapa básico  con ggplot
+```{r}
+ggplot() +
+  geom_sf(data = endemismos, color = "red")
+```
+
+# Mapa combinado con ENP y endemismos
+```{r}
+ggplot() +
+  geom_sf(data = endemismos, aes(color = Especie))
 ```
 
 # Comprobar el CRS original
