@@ -1,0 +1,462 @@
+---
+title: "Ejemplo práctico de análisis espacial con R"
+author: "Mario Mingarro"
+date: "Marzo 2025"
+output: 
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+## Introducción
+
+Este documento muestra un ejemplo de análisis espacial para tres endemismos de mariposas en España. El código ha sido estructurado de manera secuencial, pero en este tipo de procesos las secuencias pueden diferir entre analistas. En este ejemplo he tratado de muestrar diferentes herramientas básicas y tratando de reducir la utilización de librerías, ya que es material de apoyo para el curso. Con todo esto, el objetivo del ejemplo es el de la generación de la siguiente cartografía.
+
+<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/resultado final.jpeg" width="958" height="659">
+
+## Los endemismos
+
+*Erebia palarica*
+
+<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Erebia_palarica.jpg" width="300" height="200">
+
+*Erebia rondoui*
+
+<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Erebia_rondoui.jpg" width="300" height="200">
+
+*Euchloe bazae*
+
+<img src="C:/A_TRABAJO/CURSO_FORMACION_CSIC/seminario_biogeografia_MNCN/Euchloe_bazae.jpg" width="300" height="200">
+
+## Carga de librerías
+
+Cargamos las librerías necesarias para el análisis espacial en R.
+
+```{r}
+library(dplyr) # Manipulación de datos
+```
+
+```{r carga_librerias, warning=FALSE, message=FALSE}
+library(sf) # Manejo de datos espaciales
+library(ggplot2) # Visualización de datos
+library(geodata) # Descarga de datos geográficos
+library(terra) # Manejo de datos raster
+library(gridExtra) # Organiza múltiples gráficos
+```
+
+## Importación de datos
+
+Cargamos el archivo CSV con los datos de endemismos delimitados por comas.
+
+```{r carga_datos}
+endemismos <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/DATA/endemism_seleccionados.csv")
+```
+
+## Exploración de la estructura de los datos
+
+Es importante inspeccionar el dataframe para conocer las columnas disponibles y sus tipos de datos.
+
+```{r estructura_datos}
+str(endemismos)
+```
+
+## Conversión a objeto espacial (sf)
+
+Convertimos el dataframe a un objeto espacial `sf`, usando las columnas de coordenadas.
+
+```{r conversion_sf}
+endemismos <- st_as_sf(endemismos, coords = c("Longitud", "Latitud"), crs = 4326)
+```
+
+## Creación de mapas
+
+Generamos mapas básicos para visualizar los puntos de los endemismos.
+
+```{r}
+ggplot() +
+  geom_sf(data = endemismos, color = "red")
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = endemismos, aes(color = Especie))
+```
+
+## Comprobación y transformación del sistema de referencia
+
+Antes de realizar análisis espaciales, verificamos el sistema de referencia espacial (CRS) de los datos y los transformamos si es necesario.
+
+```{r crs_original}
+st_crs(endemismos)
+```
+
+Transformamos los datos al sistema de referencia ETRS89 30N (EPSG: 25830), comúnmente utilizado en estudios espaciales en España.
+
+```{r transformacion_crs}
+endemismos <- st_transform(endemismos, crs = 25830)
+```
+
+Verificamos que la transformación se ha realizado correctamente.
+
+```{r crs_verificado}
+st_crs(endemismos)
+```
+
+## Carga y preparación de datos geográficos de España
+
+Descargamos los datos administrativos de España y los convertimos en objetos espaciales.
+
+```{r carga_mapa_espana}
+spain <- geodata::gadm(country = "ESP", level = 1, path = tempdir())
+spain <- st_as_sf(spain)
+spain <- st_transform(spain, crs = 25830)
+```
+
+Filtramos para obtener solo la España Peninsular, excluyendo islas y ciudades autónomas.
+
+```{r seleccion_peninsular}
+spain_peninsular <- spain %>%
+  dplyr::select(CCAA = NAME_1) %>%
+  dplyr::filter(!CCAA %in% c("Islas Baleares", "Islas Canarias", "Ceuta y Melilla"))
+```
+
+Creamos una máscara de la España Peninsular a partir de la unión de sus geometrías.
+
+```{r creacion_mascara}
+spain_peninsular_mask <- st_union(spain_peninsular)
+```
+
+Visualizamos la España Peninsular y los endemismos sobre ella.
+
+```{r mapa_peninsular_endemismos}
+ggplot() +
+  geom_sf(data = spain_peninsular, color = "green4") +
+  geom_sf(data = spain_peninsular_mask, 
+          fill = "transparent", 
+          color = "black", 
+          linewidth = 1) +
+  geom_sf(data = endemismos, color = "red")
+```
+
+## Descarga y visualización del mapa mundial
+
+Descargamos un mapa mundial y lo convertimos en un objeto `sf`.
+
+```{r mapa_mundo_peninsula}
+world_map <- geodata::world(path = tempdir(), resolution = 2)
+world_map <- st_as_sf(world_map)
+```
+
+Visualizamos el mapa mundial con España Peninsular y los endemismos.
+
+```{r}
+ggplot() +
+  geom_sf(data = world_map,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth = 1) +
+  geom_sf(data = endemismos,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+## Creación de una malla hexagonal para análisis espacial
+
+Generamos una malla hexagonal con celdas de 50 km de lado.
+
+```{r creacion_malla}
+malla <- st_make_grid(spain_peninsular_mask, cellsize = 50000, square = FALSE)
+malla <- st_as_sf(malla)
+```
+
+Visualización de la malla generada
+
+```{r visualizar malla}
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_sf(data = malla, fill = "transparent") +
+  geom_sf(data = endemismos,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+
+Intersección de la malla con España Peninsular para limitar la extensión.
+
+```{r malla_peninsula}
+malla <- st_intersection(malla, spain_peninsular_mask)
+```
+
+Visualización de la malla peninsular
+
+```{r visualizar_malla_peninsular}
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_sf(data = malla, fill = "transparent") +
+  geom_sf(data = endemismos,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+Seleccionamos los registros de endemismos que están dentro de la España Peninsular.
+
+```{r interseccion_endemismos_peninsula}
+endemismos_spain <- st_intersection(endemismos, spain_peninsular_mask)
+```
+
+Visualizar los registros de endemismos que están dentro de la España Peninsular.
+```{r visualizar_endemismos}
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_sf(data = endemismos, color = "green") +
+  geom_sf(data = endemismos_spain, color = "red") +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+Relacionar el número de endemismos por cuadrícula
+```{r}
+resultado <- st_join(malla, endemismos_spain, join = st_intersects)
+resultado <- resultado %>%  
+  filter(Especie > 0) # selecciona solo aquellas cuadriculas con al menos 1 presencia
+```
+
+Visualizar las cuadriculas con endemismos
+```{r}
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_sf(data = resultado,
+          fill = "blue",
+          alpha = .2) +
+  geom_sf(data = endemismos_spain,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+
+## Análisis climático y espacial
+
+Descargamos un modelo digital de elevaciones desde el paquete geodata.
+```{r descarga_dem}
+dem <- geodata::elevation_30s(country = "ESP", path = tempdir()) 
+```
+
+Cambiamos la resolución a 0.25º ya que el MDT será visual y de esta manera aportar mayor fluidez.
+```{r aggergate_dem}
+dem <- terra::aggregate(dem, 3, fun = "median")
+```
+
+Convertirmos el raster en un dataframe para su posterior visualización en ggplot
+```{r preparar_raster_visualizar}
+dem_df <- as.data.frame(dem, xy = TRUE)
+colnames(dem_df) <- c("x", "y", "elevation")
+```
+
+Visualización del MDE como mapa base
+```{r visualizacion_dem}
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_tile(data = dem_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(data = resultado,
+          fill = "blue",
+          alpha = .2) +
+  geom_sf(data = endemismos_spain,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light()
+```
+
+Verificar el CRS de los datos. siempre mas facil proyectar vector que raster
+```{r}
+terra::crs(dem)
+```
+
+Reproyección de datos vectoriales suele ser más rápida que la de rasteres
+Convertimos la malla a un objeto vectorial de `terra` para trabajar con datos raster mas eficientemente.
+
+```{r}
+spain_peninsular_vect <- sf::st_transform(spain_peninsular_mask, crs = 4326)
+spain_peninsular_vect <- terra::vect(spain_peninsular_vect)
+```
+
+
+Recortar datos raster con máscara y extensión
+Recortar el DEM usando la extensión de España
+
+```{r}
+dem_recortado <- terra::crop(dem, spain_peninsular_vect)
+dem_recortado <- terra::mask(dem_recortado, spain_peninsular_vect)
+```
+Visualización del MDE como mapa base
+```{r visualizacion_dem_recortado}
+dem_recortado_df <- as.data.frame(dem_recortado, xy = TRUE)
+colnames(dem_recortado_df) <- c("x", "y", "elevation")
+ggplot() +
+  geom_sf(data = world_map ,
+          fill = "gray30",
+          color = "black") +
+  geom_sf(data = spain_peninsular_mask,
+          color = "black",
+          linewidth  = 1) +
+  geom_tile(data = dem_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(data = resultado,
+          fill = "blue",
+          alpha = .2) +
+  geom_sf(data = endemismos_spain,
+          color = "red",
+          alpha = .4) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light() +
+  scale_fill_gradient(low = "white",
+                      high = "black",
+                      name = "Elevación")
+```
+
+Descargar datos climáticos (temperatura máxima mensual) con el extend de España
+```{r}
+tmax <- geodata::worldclim_country(country = "ESP", var = "tmax", res = 0.5, path=tempdir())
+tmin <- geodata::worldclim_country(country = "ESP", var = "tmin", res = 0.5, path=tempdir())
+```
+
+Visualizar de manera rápida un raster
+```{r}
+plot(tmax)
+```
+
+Cálculo de las temperaturas medias mensuales
+```{r}
+tmed_mensual <- (tmax + tmin) / 2
+plot(tmed_mensual)
+```
+
+Cálculo de las temperaturas medias máximas y mínimas anuales
+```{r}
+tmax_media <- mean(tmax)
+tmin_media <- mean(tmin)
+plot(tmax_media)
+```
+
+Cálculo de las temperatura media anuales
+```{r}
+tmed_anual <- (tmax_media + tmin_media) /2
+plot(tmed_anual)
+```
+
+Unión de datos climáticos con la malla
+```{r}
+resultado_vect <- terra::vect(resultado)
+terra::crs(tmed_anual) == terra::crs(resultado_vect)
+```
+
+Verificar el CRS de los datos
+```{r}
+tmed_anual <- terra::project(tmed_anual, terra::crs(resultado_vect))
+```
+
+
+Calcular la elevación media por cuadricula
+```{r}
+tmed_anual_malla <- terra::zonal(tmed_anual, resultado_vect, fun = "median")
+resultado <- mutate(resultado, T_med = tmed_anual_malla$mean)
+```
+
+```{r}
+head(resultado)
+```
+
+## Presentación de resultados
+Creación del mapa base
+```{r}
+mapa <- ggplot() +
+  geom_sf(data = world_map,
+          fill = "gray30",
+          color = "black") +
+  geom_tile(data = dem_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(
+    data = spain_peninsular,
+    color = "gray20",
+    fill = "transparent",
+    linewidth = 0.5
+  ) +
+  geom_sf(
+    data = resultado, aes(col = Especie),
+    fill = "transparent",
+    linewidth = 1
+  ) +
+  geom_sf(data = endemismos_spain,
+          color = "red",
+          alpha = 0.4) +
+  geom_sf(
+    data = spain_peninsular_mask,
+    color = "black",
+    fill = "transparent",
+    linewidth = 1
+  ) +
+  coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
+  theme_light() +
+  theme(axis.title = element_blank()) +
+  scale_fill_gradient(low = "white",
+                      high = "black",
+                      name = "Elevación")
+```
+Creamos el grafico de comparación de temperaturas medias anuales
+```{r}
+boxplot_plot <- ggplot() +
+  geom_boxplot(data = resultado, aes(x = Especie, y = T_med, fill = Especie)) +
+  theme(
+    panel.background = element_rect(fill = "gray80"),
+    plot.background = element_rect(fill = "gray20"),
+    legend.position = "none",
+    line = element_blank(),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.y = element_text(color = "white"),
+    axis.text.y = element_text(color = "white")
+  ) +
+  labs(y = "ºC")
+```
+Creación del mapa final
+```{r presentacion_resultados, fig.width = 10, fig.height = 10}
+boxplot_grob <- ggplotGrob(boxplot_plot)
+
+# Ajustar la posición del boxplot según las dimensiones del mapa
+mapa + annotation_custom(grob = boxplot_grob, 
+                    xmin = -10, xmax = 4, 
+                    ymin = 34.6, 
+                    ymax = 35.8) 
+```

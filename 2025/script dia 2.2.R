@@ -238,12 +238,15 @@ library(gridExtra)
 mapa <- ggplot() +
   geom_sf(data = world_map, fill = "gray30", color = "black") +
   geom_raster(data = dem_recortado_df, aes(x = x, y = y, fill = elevation)) +
+  geom_sf(data = spain_peninsular, color = "gray20", fill = "transparent", linewidth = 0.5) +
   geom_sf(data = malla_puntos, aes(col = Especie),fill = "transparent", linewidth = 1) +
   geom_sf(data = endemismos_spain, color = "red", alpha = 0.4) +
   geom_sf(data = spain_peninsular_mask, color = "black", fill = "transparent", linewidth = 1) +
   coord_sf(xlim = c(-10, 4), ylim = c(35, 44)) +
   theme_light()+
-  scale_fill_gradient(low = "white", high = "black")
+  theme(axis.title = element_blank())+
+  scale_fill_gradient(low = "white", high = "black", name = "Elevación")
+  
 
 # Boxplot
 boxplot_plot <- ggplot() +
@@ -256,8 +259,7 @@ boxplot_plot <- ggplot() +
     axis.title.x = element_blank(),
     axis.text.x = element_blank(),
     axis.title.y = element_text(color = "white"), # Titulo eje y blanco
-    axis.text.y = element_text(color="white") # texto eje y blanco
-  ) +
+    axis.text.y = element_text(color="white")) +
   labs(y = "ºC")
 
 boxplot_grob <- ggplotGrob(boxplot_plot)
