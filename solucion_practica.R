@@ -42,7 +42,6 @@ squatina_corregida <- sf::st_transform(squatina_4326, crs = 4083)
 squatina_corregida <- sf::st_intersection(squatina_corregida, Area_estudio)
 squatina_corregida <- sf::st_difference(squatina_corregida, Islas_Canarias)
 
-
 ## AP ----
 WDPA_CAN_MARINE_AREA_SPP <- st_join(WDPA_CAN_MARINE_AREA, squatina_corregida, join = st_intersects)
 WDPA_CAN_MARINE_AREA_SPP_DENSIDAD <- WDPA_CAN_MARINE_AREA_SPP %>% 
@@ -56,4 +55,4 @@ squatina_corregida_mbsl <- terra::extract(batimetria_canarias_2024_AE, squatina_
 squatina_corregida_mbsl <- sf::st_as_sf(squatina_corregida_mbsl, coords = c("x", "y"), crs = 4083)
 squatina_corregida_mbsl_noprotegido <- sf::st_difference(squatina_corregida_mbsl, WDPA_CAN_MARINE_AREA)
 
-
+rm(list=(ls()[ls()!=c("squatina_corregida_mbsl_noprotegido", "squatina_corregida_mbsl")]))
