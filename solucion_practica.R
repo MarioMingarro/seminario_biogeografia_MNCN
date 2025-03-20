@@ -1,9 +1,7 @@
 library(dplyr) # Manipulación de datos
 library(sf) # Manejo de datos espaciales
-library(ggplot2) # Visualización de datos
-library(geodata) # Descarga de datos geográficos
 library(terra) # Manejo de datos raster
-library(gridExtra) # Organiza múltiples gráficos
+
 
 # DATOS ----
 ## BATIMETRÏA ----
@@ -19,18 +17,43 @@ Area_estudio_25830 <- read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_
 Islas_Canarias_25830 <- read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Islas_Canarias_25830.shp")
 
 # FASE 1 ----
-## BATIMETRÏA ----
-
 ## AP ----
 WDPA_CAN_MARINE <- WDPA_CAN %>% 
   dplyr::filter(MARINE==2)
 
 WDPA_CAN_MARINE_AREA <- WDPA_CAN %>% 
   dplyr::filter(MARINE==2) %>% 
-  dplyr::mutate(AREA = st_area())
+  dplyr::mutate(AREA = as.numeric(st_area(.)/ 1000000))
 
 ## OTROS ----
 squatina_4326 <- sf::st_as_sf(na.omit(squatina), coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
 Area_estudio <- sf::st_transform(Area_estudio_25830, crs = 4083)
-Islas_Canarias <- sf::st_transform(Islas_Canarias_25830, crs = 4083)
+Islas_Canarias <- sf::st_union(sf::st_transform(Islas_Canarias_25830, crs = 4083))
+Islas_Canarias <- sf::st_union(Islas_Canarias)
+
+## BATIMETRÏA ----
+Area_estudio_vect <- terra::vect(Area_estudio)
+batimetria_canarias_2024_AE <- terra::mask(terra::crop(batimetria_canarias_2024, Area_estudio_vect), Area_estudio_vect)
+
+
+# FASE 2 ----
+## OTROS ----
+squatina_corregida <- sf::st_transform(squatina_4326, crs = 4083)
+squatina_corregida <- sf::st_intersection(squatina_corregida, Area_estudio)
+squatina_corregida <- sf::st_difference(squatina_corregida, Islas_Canarias)
+
+
+## AP ----
+WDPA_CAN_MARINE_AREA_SPP <- st_join(WDPA_CAN_MARINE_AREA, squatina_corregida, join = st_intersects)
+WDPA_CAN_MARINE_AREA_SPP_DENSIDAD <- WDPA_CAN_MARINE_AREA_SPP %>% 
+  group_by(NAME) %>% 
+  summarise(n = n(), AREA = max(AREA)) %>% 
+  mutate(DENSIDAD = n / AREA)
+
+## BATIMETRÏA ----
+squatina_corregida_vect <- terra::vect(squatina_corregida)
+squatina_corregida_mbsl <- terra::extract(batimetria_canarias_2024_AE, squatina_corregida_vect, xy = TRUE)
+squatina_corregida_mbsl <- sf::st_as_sf(squatina_corregida_mbsl, coords = c("x", "y"), crs = 4083)
+squatina_corregida_mbsl_noprotegido <- sf::st_difference(squatina_corregida_mbsl, WDPA_CAN_MARINE_AREA)
+
 
