@@ -9,12 +9,12 @@ batimetria_canarias_2024 <- terra::rast("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Forma
 orientacion_AE <- terra::rast("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/BATIMETRIA/orientacion_AE.tif")
 
 ## AP ----
-WDPA_CAN <- read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/AP/WDPA_CAN.shp")
+WDPA_CAN <- sf::read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/AP/WDPA_CAN.shp")
 
 ## OTROS ----
 squatina <- read.csv2("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Squatina_squatina.csv")
-Area_estudio_25830 <- read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Area_estudio_25830.shp")
-Islas_Canarias_25830 <- read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Islas_Canarias_25830.shp")
+Area_estudio_25830 <- sf::read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Area_estudio_25830.shp")
+Islas_Canarias_25830 <- sf::read_sf("C:/A_TRABAJO/CURSO_FORMACION_CSIC/Formacion_CSIC_2025/PRACTICAS/DATOS_PRACTICA/1_DATA/Islas_Canarias_25830.shp")
 
 # FASE 1 ----
 ## AP ----
@@ -43,11 +43,11 @@ squatina_corregida <- sf::st_intersection(squatina_corregida, Area_estudio)
 squatina_corregida <- sf::st_difference(squatina_corregida, Islas_Canarias)
 
 ## AP ----
-WDPA_CAN_MARINE_AREA_SPP <- st_join(WDPA_CAN_MARINE_AREA, squatina_corregida, join = st_intersects)
-WDPA_CAN_MARINE_AREA_SPP_DENSIDAD <- WDPA_CAN_MARINE_AREA_SPP %>% 
-  group_by(NAME) %>% 
-  summarise(n = n(), AREA = max(AREA)) %>% 
-  mutate(DENSIDAD = n / AREA)
+WDPA_CAN_MARINE_AREA_SPP <- sf::st_join(WDPA_CAN_MARINE_AREA, squatina_corregida, join = st_intersects)
+WDPA_CAN_MARINE_AREA_SPP_DENSIDAD <- WDPA_CAN_MARINE_AREA_SPP %>%
+                                      group_by(NAME) %>%
+                                      summarise(n = n(), AREA = max(AREA)) %>%
+                                      mutate(DENSIDAD = n / AREA)
 
 ## BATIMETRÏA ----
 squatina_corregida_vect <- terra::vect(squatina_corregida)
@@ -55,4 +55,6 @@ squatina_corregida_mbsl <- terra::extract(batimetria_canarias_2024_AE, squatina_
 squatina_corregida_mbsl <- sf::st_as_sf(squatina_corregida_mbsl, coords = c("x", "y"), crs = 4083)
 squatina_corregida_mbsl_noprotegido <- sf::st_difference(squatina_corregida_mbsl, WDPA_CAN_MARINE_AREA)
 
-rm(list=(ls()[ls()!=c("squatina_corregida_mbsl_noprotegido", "squatina_corregida_mbsl")]))
+rm(list = setdiff(ls(), c("squatina_corregida_mbsl_noprotegido", "squatina_corregida_mbsl", 
+                          "Area_estudio", "Islas_Canarias", "batimetria_canarias_2024_AE", 
+                          "orientacion_AE", "WDPA_CAN_MARINE_AREA_SPP_DENSIDAD")))
